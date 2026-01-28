@@ -1,0 +1,287 @@
+.trading-page {
+  color: #e4e4e7;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.alert-error {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.alert-success {
+  background: #14532d;
+  color: #86efac;
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 14px;
+  border: 1px solid #22c55e;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.trading-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 24px;
+}
+
+.order-ticket {
+  background: #1a1d29;
+  border: 1px solid #2a2d3a;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.order-ticket h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 10px;
+  background: #0f1116;
+  border: 1px solid #2a2d3a;
+  border-radius: 6px;
+  color: #e4e4e7;
+  font-size: 14px;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exchange-warning {
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.exchange-warning p {
+  margin: 0 0 8px 0;
+}
+
+.link-primary {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link-primary:hover {
+  text-decoration: underline;
+}
+
+.side-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.side-btn {
+  flex: 1;
+  padding: 10px;
+  background: #0f1116;
+  border: 1px solid #2a2d3a;
+  border-radius: 6px;
+  color: #9ca3af;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.side-btn:hover {
+  background: #252833;
+}
+
+.side-btn.active.buy {
+  background: #14532d;
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.side-btn.active.sell {
+  background: #7f1d1d;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+}
+
+.btn-place-order {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.btn-place-order.buy {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-place-order.buy:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.btn-place-order.sell {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-place-order.sell:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-place-order:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.open-orders {
+  background: #1a1d29;
+  border: 1px solid #2a2d3a;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #2a2d3a;
+  color: #e4e4e7;
+  border: 1px solid #3a3d4a;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #3a3d4a;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-cancel {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border: 1px solid #991b1b;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.order-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.order-status-new {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.order-status-filled {
+  background: #14532d;
+  color: #86efac;
+}
+
+.order-status-canceled {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #9ca3af;
+}

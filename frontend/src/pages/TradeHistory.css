@@ -1,0 +1,52 @@
+.trade-history-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #e4e4e7;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  background: #0f1116;
+  border: 1px solid #2a2d3a;
+  color: #e4e4e7;
+  font-size: 13px;
+  border-radius: 6px;
+  flex: 1;
+  max-width: 200px;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.filter-input[type="date"] {
+  max-width: 150px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #9ca3af;
+}

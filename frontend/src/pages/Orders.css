@@ -1,0 +1,41 @@
+.orders-page {
+  color: #e4e4e7;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.order-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.order-status-new {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.order-status-filled {
+  background: #14532d;
+  color: #86efac;
+}
+
+.order-status-canceled {
+  background: #7f1d1d;
+  color: #fca5a5;
+}

@@ -1,0 +1,34 @@
+{
+  "name": "multi-exchange-portfolio-monitor",
+  "version": "1.0.0",
+  "description": "Multi-Exchange Portfolio Monitoring Platform - Phase 1 (Read-Only)",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "keywords": ["crypto", "trading", "portfolio", "monitoring"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "axios": "^1.6.2",
+    "pg": "^8.11.3",
+    "redis": "^4.6.11",
+    "dotenv": "^16.3.1",
+    "crypto-js": "^4.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/ws": "^8.5.10",
+    "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
+    "@types/crypto-js": "^4.2.1",
+    "typescript": "^5.3.3",
+    "ts-node-dev": "^2.0.0"
+  }
+}
