@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
 import DataTable from '../components/DataTable';
+import TradingViewWidget from '../components/TradingViewWidget';
 import './Trading.css';
 
 interface OrderResult {
@@ -13,6 +14,29 @@ interface OrderResult {
   quantity: number;
   filledQuantity: number;
   remainingQuantity: number;
+  timestamp: number;
+  exchange: string;
+}
+
+interface Position {
+  symbol: string;
+  side: 'long' | 'short';
+  size: number;
+  entryPrice: number;
+  markPrice: number;
+  unrealizedPnl: number;
+  leverage: number;
+  exchange: string;
+}
+
+interface TradeFill {
+  tradeId: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  price: number;
+  quantity: number;
+  realizedPnl: number;
+  fee: number;
   timestamp: number;
   exchange: string;
 }
@@ -31,17 +55,34 @@ function Trading() {
     postOnly: false,
   });
   const [openOrders, setOpenOrders] = useState<OrderResult[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [orderHistory, setOrderHistory] = useState<OrderResult[]>([]);
+  const [tradeHistory, setTradeHistory] = useState<TradeFill[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchExchanges();
-    if (selectedExchange) {
-      fetchOpenOrders();
-      const interval = setInterval(fetchOpenOrders, 5000);
-      return () => clearInterval(interval);
-    }
+    if (!selectedExchange) return;
+
+    fetchOpenOrders();
+    fetchPositions();
+    fetchOrderHistory();
+    fetchTradeHistory();
+
+    const openOrdersInterval = setInterval(fetchOpenOrders, 5000);
+    const snapshotInterval = setInterval(fetchPositions, 10000);
+    const historyInterval = setInterval(() => {
+      fetchOrderHistory();
+      fetchTradeHistory();
+    }, 15000);
+
+    return () => {
+      clearInterval(openOrdersInterval);
+      clearInterval(snapshotInterval);
+      clearInterval(historyInterval);
+    };
   }, [selectedExchange]);
 
   const fetchExchanges = async () => {
@@ -96,6 +137,70 @@ function Trading() {
       console.error('Failed to fetch open orders:', err);
       setError(`Network error: ${err.message || 'Failed to fetch open orders'}`);
       setOpenOrders([]);
+    }
+  };
+
+  const fetchPositions = async () => {
+    try {
+      // Try latest snapshot first, fallback to fresh snapshot
+      let snapshot: any;
+      try {
+        snapshot = await apiClient.getLatestSnapshot();
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          snapshot = await apiClient.getPortfolioSnapshot();
+        } else {
+          throw err;
+        }
+      }
+
+      const allPositions = snapshot?.positions || [];
+      const filtered = allPositions.filter(
+        (p: Position) => !selectedExchange || p.exchange === selectedExchange
+      );
+      setPositions(filtered);
+    } catch (err) {
+      console.error('Failed to fetch positions:', err);
+    }
+  };
+
+  const fetchOrderHistory = async () => {
+    if (!selectedExchange) return;
+    try {
+      const response = await fetch(`/api/trade/history?exchange=${selectedExchange}&limit=50`);
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+
+      if (!response.ok) {
+        console.error('Failed to fetch order history:', data.error || 'Unknown error');
+        setOrderHistory([]);
+        return;
+      }
+
+      setOrderHistory(data.orders || []);
+    } catch (err: any) {
+      console.error('Failed to fetch order history:', err);
+      setOrderHistory([]);
+    }
+  };
+
+  const fetchTradeHistory = async () => {
+    if (!selectedExchange) return;
+    try {
+      const response = await fetch(`/api/trade/trades?exchange=${selectedExchange}&limit=50`);
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+
+      if (!response.ok) {
+        console.error('Failed to fetch trade history:', data.error || 'Unknown error');
+        setTradeHistory([]);
+        return;
+      }
+
+      setTradeHistory(data.trades || []);
+    } catch (err: any) {
+      console.error('Failed to fetch trade history:', err);
+      setTradeHistory([]);
     }
   };
 
@@ -225,6 +330,42 @@ function Trading() {
     }
   };
 
+  const handleClosePosition = async (position: Position) => {
+    if (!confirm(`Close ${position.symbol} ${position.side.toUpperCase()} position?`)) {
+      return;
+    }
+
+    try {
+      const closeSide = position.side === 'long' ? 'sell' : 'buy';
+
+      const response = await fetch('/api/trade/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exchange: selectedExchange,
+          symbol: position.symbol,
+          side: closeSide,
+          type: 'market',
+          market: 'futures',
+          quantity: position.size,
+          reduceOnly: true,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to close position');
+      }
+
+      setSuccess(`✅ Position closed: ${position.symbol} (${position.side})`);
+      setError(null);
+      await fetchPositions();
+      await fetchOpenOrders();
+    } catch (err: any) {
+      setError(err.message || 'Failed to close position');
+    }
+  };
+
   const orderColumns = [
     {
       key: 'symbol',
@@ -283,6 +424,119 @@ function Trading() {
       ),
     },
   ];
+
+  const positionColumns = [
+    {
+      key: 'symbol',
+      header: 'Symbol',
+      render: (item: Position) => <strong>{item.symbol}</strong>,
+    },
+    {
+      key: 'side',
+      header: 'Side',
+      render: (item: Position) => (
+        <span className={item.side === 'long' ? 'text-green' : 'text-red'}>
+          {item.side.toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      key: 'size',
+      header: 'Size',
+      render: (item: Position) => item.size.toFixed(4),
+    },
+    {
+      key: 'entryPrice',
+      header: 'Entry',
+      render: (item: Position) => `$${item.entryPrice.toFixed(2)}`,
+    },
+    {
+      key: 'markPrice',
+      header: 'Mark',
+      render: (item: Position) => `$${item.markPrice.toFixed(2)}`,
+    },
+    {
+      key: 'unrealizedPnl',
+      header: 'Unrealized PnL',
+      render: (item: Position) => (
+        <span className={item.unrealizedPnl >= 0 ? 'text-green' : 'text-red'}>
+          ${item.unrealizedPnl.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (item: Position) => (
+        <button className="btn-close" onClick={() => handleClosePosition(item)}>
+          Close
+        </button>
+      ),
+    },
+  ];
+
+  const historyOrderColumns = [
+    {
+      key: 'timestamp',
+      header: 'Time',
+      render: (item: OrderResult) => new Date(item.timestamp).toLocaleString(),
+    },
+    {
+      key: 'symbol',
+      header: 'Symbol',
+    },
+    {
+      key: 'side',
+      header: 'Side',
+      render: (item: OrderResult) => (
+        <span className={item.side === 'buy' ? 'text-green' : 'text-red'}>
+          {item.side.toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (item: OrderResult) => item.status.toUpperCase(),
+    },
+  ];
+
+  const tradeColumns = [
+    {
+      key: 'timestamp',
+      header: 'Time',
+      render: (item: TradeFill) => new Date(item.timestamp).toLocaleString(),
+    },
+    {
+      key: 'symbol',
+      header: 'Symbol',
+    },
+    {
+      key: 'side',
+      header: 'Side',
+      render: (item: TradeFill) => (
+        <span className={item.side === 'buy' ? 'text-green' : 'text-red'}>
+          {item.side.toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      key: 'price',
+      header: 'Price',
+      render: (item: TradeFill) => `$${item.price.toFixed(2)}`,
+    },
+    {
+      key: 'quantity',
+      header: 'Qty',
+      render: (item: TradeFill) => item.quantity.toFixed(4),
+    },
+  ];
+
+  const chartSymbol = orderForm.symbol
+    ? `BINANCE:${orderForm.symbol.replace('/', '')}`
+    : positions.length > 0
+      ? `BINANCE:${positions[0].symbol.replace('/', '')}`
+      : 'BINANCE:BTCUSDT';
 
   return (
     <div className="trading-page">
@@ -440,6 +694,17 @@ function Trading() {
           </button>
         </div>
 
+        <div className="trading-right">
+          <div className="chart-panel">
+            <div className="chart-header">
+              <h3>Chart (TradingView)</h3>
+              <div className="chart-meta">{chartSymbol}</div>
+            </div>
+            <div className="chart-body">
+              <TradingViewWidget symbol={chartSymbol} interval="60" theme="dark" />
+            </div>
+          </div>
+
         {/* Open Orders Table */}
         <div className="open-orders">
           <div className="section-header">
@@ -483,6 +748,30 @@ function Trading() {
           ) : (
             <div className="empty-state">Select an exchange to view orders</div>
           )}
+        </div>
+        </div>
+      </div>
+
+      <div className="trading-panels">
+        <div className="panel">
+          <div className="section-header">
+            <h3>Positions</h3>
+          </div>
+          <DataTable columns={positionColumns} data={positions} emptyMessage="No open positions" />
+        </div>
+
+        <div className="panel">
+          <div className="section-header">
+            <h3>Order History</h3>
+          </div>
+          <DataTable columns={historyOrderColumns} data={orderHistory} emptyMessage="No order history" />
+        </div>
+
+        <div className="panel">
+          <div className="section-header">
+            <h3>Trade History</h3>
+          </div>
+          <DataTable columns={tradeColumns} data={tradeHistory} emptyMessage="No trade history" />
         </div>
       </div>
     </div>

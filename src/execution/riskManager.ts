@@ -43,18 +43,23 @@ export class RiskManager {
     const errors: string[] = [];
 
     // Check order size
-    const orderValue = orderParams.price
+    let orderValue = orderParams.price
       ? orderParams.quantity * orderParams.price
       : 0; // Market orders - would need current price
 
-    if (orderValue > this.limits.maxOrderSize) {
+    // If reduce-only and current position exists, use position value for sizing
+    if (orderParams.reduceOnly && currentPosition) {
+      orderValue = Math.abs(currentPosition.value);
+    }
+
+    if (!orderParams.reduceOnly && orderValue > this.limits.maxOrderSize) {
       errors.push(
         `Order size ($${orderValue.toFixed(2)}) exceeds maximum ($${this.limits.maxOrderSize.toFixed(2)})`
       );
     }
 
     // Check position size
-    if (currentPosition) {
+    if (currentPosition && !orderParams.reduceOnly) {
       const newPositionValue = currentPosition.value + orderValue;
       if (newPositionValue > this.limits.maxPositionSize) {
         errors.push(
@@ -64,7 +69,7 @@ export class RiskManager {
     }
 
     // Check balance sufficiency
-    if (orderParams.side === 'buy' && orderValue > availableBalance) {
+    if (!orderParams.reduceOnly && orderParams.side === 'buy' && orderValue > availableBalance) {
       errors.push('Insufficient balance for order');
     }
 
