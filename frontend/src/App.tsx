@@ -11,6 +11,14 @@ import Trading from './pages/Trading';
 import Exchanges from './pages/Exchanges';
 import Alerts from './pages/Alerts';
 
+function LoginRoute() {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return <Login />;
+}
+
 function ProtectedRoutes() {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) {
@@ -27,6 +35,7 @@ function ProtectedRoutes() {
         <Route path="/trading" element={<Trading />} />
         <Route path="/exchanges" element={<Exchanges />} />
         <Route path="/alerts" element={<Alerts />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   );
@@ -42,7 +51,7 @@ function App() {
         }}
       >
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginRoute />} />
           <Route path="/*" element={<ProtectedRoutes />} />
         </Routes>
       </BrowserRouter>

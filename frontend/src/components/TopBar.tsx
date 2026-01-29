@@ -4,7 +4,12 @@ import { apiClient } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './TopBar.css';
 
-function TopBar() {
+type TopBarProps = {
+  onToggleSidebar?: () => void;
+  onOpenSidebar?: () => void;
+};
+
+function TopBar({ onToggleSidebar, onOpenSidebar }: TopBarProps) {
   const [exchanges, setExchanges] = useState<string[]>([]);
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -23,6 +28,14 @@ function TopBar() {
   return (
     <div className="topbar">
       <div className="topbar-left">
+        <button
+          type="button"
+          className="topbar-menu"
+          aria-label="Open menu"
+          onClick={onToggleSidebar || onOpenSidebar}
+        >
+          ☰
+        </button>
         <h2>Portfolio Monitor</h2>
       </div>
       <div className="topbar-right">

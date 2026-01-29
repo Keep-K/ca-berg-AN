@@ -2,7 +2,12 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 
-function Sidebar() {
+type SidebarProps = {
+  isOpen?: boolean;
+  onClose?: () => void;
+};
+
+function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const location = useLocation();
 
   const menuItems = [
@@ -17,9 +22,17 @@ function Sidebar() {
   ];
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <h1>Portfolio Monitor</h1>
+        <button
+          type="button"
+          className="sidebar-close"
+          aria-label="Close menu"
+          onClick={onClose}
+        >
+          ×
+        </button>
       </div>
       <nav className="sidebar-nav">
         {menuItems.map((item) => (
@@ -27,6 +40,7 @@ function Sidebar() {
             key={item.path}
             to={item.path}
             className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            onClick={() => onClose?.()}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-label">{item.label}</span>

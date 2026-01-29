@@ -1,11 +1,25 @@
 .layout {
-  display: flex;
+  display: block;
   height: 100vh;
   background: #0f1116;
 }
 
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 90;
+  cursor: pointer;
+}
+
+.sidebar-overlay.open {
+  display: block;
+}
+
 .main-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
