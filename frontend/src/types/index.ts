@@ -5,6 +5,7 @@ export interface UnifiedBalance {
   usdValue: number;
   exchange: string;
   timestamp: number;
+  accountType?: 'spot' | 'futures';
 }
 
 export interface UnifiedPosition {

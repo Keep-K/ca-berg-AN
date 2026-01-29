@@ -179,6 +179,12 @@ export function createRoutes(eventBus: EventBus, userContextService: UserContext
       if (orderParams.type === 'limit' && !orderParams.price) {
         return res.status(400).json({ error: 'Price is required for limit orders' });
       }
+      if (orderParams.leverage !== undefined) {
+        const leverageNum = parseInt(orderParams.leverage, 10);
+        if (Number.isNaN(leverageNum) || leverageNum < 1 || leverageNum > 125) {
+          return res.status(400).json({ error: 'Leverage must be between 1 and 125' });
+        }
+      }
       const order: OrderParams = {
         symbol: orderParams.symbol.toUpperCase(),
         side: orderParams.side.toLowerCase() as 'buy' | 'sell',
@@ -186,6 +192,7 @@ export function createRoutes(eventBus: EventBus, userContextService: UserContext
         quantity: parseFloat(orderParams.quantity),
         price: orderParams.price ? parseFloat(orderParams.price) : undefined,
         market: orderParams.market === 'futures' ? 'futures' : 'spot',
+        leverage: orderParams.leverage ? parseInt(orderParams.leverage, 10) : undefined,
         reduceOnly: orderParams.reduceOnly || false,
         timeInForce: orderParams.timeInForce || 'GTC',
         stopPrice: orderParams.stopPrice ? parseFloat(orderParams.stopPrice) : undefined,
@@ -259,12 +266,23 @@ export function createRoutes(eventBus: EventBus, userContextService: UserContext
   router.get('/trade/history', async (req: Request, res: Response) => {
     try {
       const userId = req.userId!;
-      const { exchange, symbol, limit } = req.query;
+      const { exchange, symbol, limit, market } = req.query;
+      const limitNum = limit ? parseInt(limit as string) : 100;
+
+      if (exchange && symbol && market) {
+        const executionEngine = await userContextService.getExecutionEngine(userId);
+        const connector = executionEngine.getConnector(exchange as string) as any;
+        if (connector && typeof connector.fetchOrderHistory === 'function') {
+          const orders = await connector.fetchOrderHistory(symbol as string, market as 'spot' | 'futures', limitNum);
+          return res.json({ orders });
+        }
+      }
+
       const orders = await orderStore.getOrderHistory(
         userId,
         exchange as string | undefined,
         symbol as string | undefined,
-        limit ? parseInt(limit as string) : 100
+        limitNum
       );
       res.json({ orders });
     } catch (error: any) {
@@ -279,16 +297,89 @@ export function createRoutes(eventBus: EventBus, userContextService: UserContext
   router.get('/trade/trades', async (req: Request, res: Response) => {
     try {
       const userId = req.userId!;
-      const { exchange, symbol, limit } = req.query;
+      const { exchange, symbol, limit, market } = req.query;
+      const limitNum = limit ? parseInt(limit as string) : 100;
+
+      if (exchange && symbol && market) {
+        const executionEngine = await userContextService.getExecutionEngine(userId);
+        const connector = executionEngine.getConnector(exchange as string) as any;
+        if (connector && typeof connector.fetchTradesBySymbol === 'function') {
+          const trades = await connector.fetchTradesBySymbol(symbol as string, market as 'spot' | 'futures', limitNum);
+          return res.json({ trades });
+        }
+      }
+
       const trades = await orderStore.getTradeHistory(
         userId,
         exchange as string | undefined,
         symbol as string | undefined,
-        limit ? parseInt(limit as string) : 100
+        limitNum
       );
       res.json({ trades });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/trade/transactions
+   */
+  router.get('/trade/transactions', async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { exchange, limit, market, symbol } = req.query;
+      const limitNum = limit ? parseInt(limit as string) : 20;
+      if (!exchange) return res.status(400).json({ error: 'Exchange is required' });
+
+      const executionEngine = await userContextService.getExecutionEngine(userId);
+      const connector = executionEngine.getConnector(exchange as string) as any;
+      if (market === 'futures' && connector && typeof connector.fetchFuturesIncome === 'function') {
+        const transactions = await connector.fetchFuturesIncome(limitNum);
+        return res.json({ transactions });
+      }
+      if (market === 'spot' && connector && typeof connector.fetchTradesBySymbol === 'function') {
+        if (!symbol) return res.status(400).json({ error: 'Symbol is required for spot transactions' });
+        const trades = await connector.fetchTradesBySymbol(symbol as string, 'spot', limitNum);
+        const transactions = trades.map((t: any) => ({
+          time: t.timestamp,
+          exchange: exchange,
+          type: 'Trade',
+          asset: t.symbol,
+          amount: t.quantity,
+          status: 'Completed',
+          txid: t.tradeId,
+          symbol: t.symbol,
+        }));
+        return res.json({ transactions });
+      }
+      res.status(400).json({ error: 'Transactions not supported for this exchange' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch transactions' });
+    }
+  });
+
+  /**
+   * GET /api/trade/assets
+   */
+  router.get('/trade/assets', async (req: Request, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const { exchange, market } = req.query;
+      if (!exchange) return res.status(400).json({ error: 'Exchange is required' });
+
+      const executionEngine = await userContextService.getExecutionEngine(userId);
+      const connector = executionEngine.getConnector(exchange as string) as any;
+      if (market === 'futures' && connector && typeof connector.fetchFuturesAssets === 'function') {
+        const assets = await connector.fetchFuturesAssets();
+        return res.json({ assets });
+      }
+      if (market === 'spot' && connector && typeof connector.fetchSpotAssets === 'function') {
+        const assets = await connector.fetchSpotAssets();
+        return res.json({ assets });
+      }
+      res.status(400).json({ error: 'Assets not supported for this exchange' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch assets' });
     }
   });
 

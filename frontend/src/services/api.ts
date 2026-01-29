@@ -67,21 +67,23 @@ export const apiClient = {
     return response.data;
   },
 
-  async getOrderHistory(params?: { exchange?: string; symbol?: string; limit?: number }) {
+  async getOrderHistory(params?: { exchange?: string; symbol?: string; limit?: number; market?: string }) {
     const search = new URLSearchParams();
     if (params?.exchange) search.set('exchange', params.exchange);
     if (params?.symbol) search.set('symbol', params.symbol);
     if (params?.limit != null) search.set('limit', String(params.limit));
+    if (params?.market) search.set('market', params.market);
     const q = search.toString();
     const response = await client.get(`/trade/history${q ? `?${q}` : ''}`);
     return response.data;
   },
 
-  async getTradeHistory(params?: { exchange?: string; symbol?: string; limit?: number }) {
+  async getTradeHistory(params?: { exchange?: string; symbol?: string; limit?: number; market?: string }) {
     const search = new URLSearchParams();
     if (params?.exchange) search.set('exchange', params.exchange);
     if (params?.symbol) search.set('symbol', params.symbol);
     if (params?.limit != null) search.set('limit', String(params.limit));
+    if (params?.market) search.set('market', params.market);
     const q = search.toString();
     const response = await client.get(`/trade/trades${q ? `?${q}` : ''}`);
     return response.data;
@@ -108,6 +110,7 @@ export const apiClient = {
     quantity: number;
     price?: number;
     market?: string;
+    leverage?: number;
     reduceOnly?: boolean;
     timeInForce?: string;
     postOnly?: boolean;
@@ -123,6 +126,26 @@ export const apiClient = {
 
   async cancelAllOrders(exchange: string, symbol?: string) {
     const response = await client.post('/trade/cancel-all', { exchange, symbol });
+    return response.data;
+  },
+
+  async getTransactions(exchange: string, limit?: number, market?: string, symbol?: string) {
+    const search = new URLSearchParams();
+    if (exchange) search.set('exchange', exchange);
+    if (limit != null) search.set('limit', String(limit));
+    if (market) search.set('market', market);
+    if (symbol) search.set('symbol', symbol);
+    const q = search.toString();
+    const response = await client.get(`/trade/transactions${q ? `?${q}` : ''}`);
+    return response.data;
+  },
+
+  async getAssets(exchange: string, market?: string) {
+    const search = new URLSearchParams();
+    if (exchange) search.set('exchange', exchange);
+    if (market) search.set('market', market);
+    const q = search.toString();
+    const response = await client.get(`/trade/assets${q ? `?${q}` : ''}`);
     return response.data;
   },
 };

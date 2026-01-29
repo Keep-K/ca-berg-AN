@@ -12,6 +12,7 @@ interface Balance {
   available: number;
   usdValue: number;
   exchange: string;
+  accountType?: 'spot' | 'futures';
 }
 
 /** Grouped row: one asset, aggregated or expanded per-exchange */
@@ -68,12 +69,14 @@ function Portfolio() {
   const tableRows = useMemo((): AssetRow[] => {
     const byAsset = new Map<string, Balance[]>();
     filteredBalances.forEach((b) => {
-      const key = b.asset;
+      const key = `${b.asset}:${b.accountType || 'spot'}`;
       if (!byAsset.has(key)) byAsset.set(key, []);
       byAsset.get(key)!.push(b);
     });
     const rows: AssetRow[] = [];
-    byAsset.forEach((items, asset) => {
+    byAsset.forEach((items, key) => {
+      const [asset, typeRaw] = key.split(':');
+      const type = typeRaw === 'futures' ? 'Futures' : 'Spot';
       const totalBalance = items.reduce((s, i) => s + i.total, 0);
       const usdValue = items.reduce((s, i) => s + i.usdValue, 0);
       const isMulti = items.length > 1;
@@ -84,7 +87,7 @@ function Portfolio() {
           totalBalance,
           usdValue,
           exchange: '—',
-          type: 'Spot',
+          type,
           isAggregate: true,
           expandable: true,
           children: items,
@@ -96,7 +99,7 @@ function Portfolio() {
             totalBalance: b.total,
             usdValue: b.usdValue,
             exchange: b.exchange,
-            type: 'Spot',
+            type,
             isAggregate: false,
             expandable: true,
             showCollapse: i === 0,
@@ -108,7 +111,7 @@ function Portfolio() {
           totalBalance: items[0].total,
           usdValue: items[0].usdValue,
           exchange: items[0].exchange,
-          type: 'Spot',
+          type,
           isAggregate: false,
         });
       }

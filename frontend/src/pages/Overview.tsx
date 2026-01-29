@@ -11,7 +11,8 @@ export type OverviewTab = 'all' | 'spot' | 'futures';
 
 function computeFilteredSnapshot(
   snapshot: PortfolioSnapshot,
-  tab: OverviewTab
+  tab: OverviewTab,
+  exchangeFilter: string
 ): {
   totalNetEquity: number;
   totalUnrealizedPnl: number;
@@ -21,12 +22,25 @@ function computeFilteredSnapshot(
   exchangeCount: number;
 } {
   const { balances, positions, change24h } = snapshot;
+  const filteredBalances = exchangeFilter
+    ? balances.filter((b) => b.exchange === exchangeFilter)
+    : balances;
+  const filteredPositions = exchangeFilter
+    ? positions.filter((p) => p.exchange === exchangeFilter)
+    : positions;
+  const hasAccountType = balances.some((b) => b.accountType);
+  const spotBalances = hasAccountType
+    ? filteredBalances.filter((b) => b.accountType !== 'futures')
+    : filteredBalances;
+  const futuresBalances = hasAccountType
+    ? filteredBalances.filter((b) => b.accountType === 'futures')
+    : [];
 
   if (tab === 'spot') {
-    const totalNetEquity = balances.reduce((s, b) => s + b.usdValue, 0);
+    const totalNetEquity = spotBalances.reduce((s, b) => s + b.usdValue, 0);
     const byExchange = new Map<string, number>();
     const byAsset = new Map<string, { usd: number; byEx: Map<string, number> }>();
-    balances.forEach((b) => {
+    spotBalances.forEach((b) => {
       if (b.usdValue <= 0) return;
       byExchange.set(b.exchange, (byExchange.get(b.exchange) ?? 0) + b.usdValue);
       const cur = byAsset.get(b.asset);
@@ -66,12 +80,55 @@ function computeFilteredSnapshot(
   }
 
   if (tab === 'futures') {
-    const totalUnrealizedPnl = positions.reduce((s, p) => s + p.unrealizedPnl, 0);
-    const totalNotional = positions.reduce((s, p) => s + p.size * p.markPrice, 0);
+    const totalUnrealizedPnl = filteredPositions.reduce((s, p) => s + p.unrealizedPnl, 0);
+    if (futuresBalances.length > 0) {
+      const totalNetEquity = futuresBalances.reduce((s, b) => s + b.usdValue, 0) + totalUnrealizedPnl;
+      const byExchange = new Map<string, number>();
+      const byAsset = new Map<string, { usd: number; byEx: Map<string, number> }>();
+      futuresBalances.forEach((b) => {
+        if (b.usdValue <= 0) return;
+        byExchange.set(b.exchange, (byExchange.get(b.exchange) ?? 0) + b.usdValue);
+        const cur = byAsset.get(b.asset);
+        if (cur) {
+          cur.usd += b.usdValue;
+          cur.byEx.set(b.exchange, (cur.byEx.get(b.exchange) ?? 0) + b.usdValue);
+        } else {
+          const byEx = new Map<string, number>();
+          byEx.set(b.exchange, b.usdValue);
+          byAsset.set(b.asset, { usd: b.usdValue, byEx });
+        }
+      });
+      const totalUsd = totalNetEquity || 1;
+      const exchangeAllocation: ExchangeAllocation[] = Array.from(byExchange.entries())
+        .map(([exchange, totalUsdValue]) => ({
+          exchange,
+          totalUsdValue,
+          percentage: (totalUsdValue / totalUsd) * 100,
+        }))
+        .sort((a, b) => b.totalUsdValue - a.totalUsdValue);
+      const assetAllocation: AssetAllocation[] = Array.from(byAsset.entries())
+        .map(([asset, data]) => ({
+          asset,
+          totalUsdValue: data.usd,
+          percentage: (data.usd / totalUsd) * 100,
+          exchanges: Array.from(data.byEx.entries()).map(([exchange, usdValue]) => ({ exchange, usdValue })),
+        }))
+        .sort((a, b) => b.totalUsdValue - a.totalUsdValue);
+      return {
+        totalNetEquity,
+        totalUnrealizedPnl,
+        change24h,
+        assetAllocation,
+        exchangeAllocation,
+        exchangeCount: exchangeAllocation.length,
+      };
+    }
+
+    const totalNotional = filteredPositions.reduce((s, p) => s + p.size * p.markPrice, 0);
     const totalNetEquity = totalNotional + totalUnrealizedPnl;
     const byExchange = new Map<string, number>();
     const byAsset = new Map<string, { usd: number; byEx: Map<string, number> }>();
-    positions.forEach((p) => {
+    filteredPositions.forEach((p) => {
       const notional = p.size * p.markPrice;
       byExchange.set(p.exchange, (byExchange.get(p.exchange) ?? 0) + notional);
       const base = p.symbol.replace(/USDT|BUSD|USD$/i, '') || p.symbol;
@@ -124,11 +181,18 @@ function computeFilteredSnapshot(
 function Overview() {
   const { snapshot, loading } = usePortfolio();
   const [tab, setTab] = useState<OverviewTab>('all');
+  const [exchangeFilter, setExchangeFilter] = useState<string>('');
 
   const filtered = useMemo(() => {
     if (!snapshot) return null;
-    return computeFilteredSnapshot(snapshot, tab);
-  }, [snapshot, tab]);
+    return computeFilteredSnapshot(snapshot, tab, exchangeFilter);
+  }, [snapshot, tab, exchangeFilter]);
+
+  const exchanges = useMemo(() => {
+    if (!snapshot) return [];
+    const list = snapshot.exchangeAllocation?.map((e) => e.exchange) ?? [];
+    return Array.from(new Set(list)).sort();
+  }, [snapshot]);
 
   if (loading && !snapshot) {
     return (
@@ -152,33 +216,45 @@ function Overview() {
   const exchangeCount = filtered?.exchangeCount ?? 0;
   const assetAllocation = filtered?.assetAllocation ?? [];
   const exchangeAllocation = filtered?.exchangeAllocation ?? [];
-
   return (
     <div className="overview-page">
       <div className="page-header overview-header">
         <h1>Overview</h1>
-        <div className="overview-tabs">
-          <button
-            type="button"
-            className={`overview-tab ${tab === 'all' ? 'active' : ''}`}
-            onClick={() => setTab('all')}
-          >
-            ALL
-          </button>
-          <button
-            type="button"
-            className={`overview-tab ${tab === 'spot' ? 'active' : ''}`}
-            onClick={() => setTab('spot')}
-          >
-            SPOT
-          </button>
-          <button
-            type="button"
-            className={`overview-tab ${tab === 'futures' ? 'active' : ''}`}
-            onClick={() => setTab('futures')}
-          >
-            FUTURES
-          </button>
+        <div className="overview-controls">
+          <div className="overview-tabs">
+            <button
+              type="button"
+              className={`overview-tab ${tab === 'all' ? 'active' : ''}`}
+              onClick={() => setTab('all')}
+            >
+              ALL
+            </button>
+            <button
+              type="button"
+              className={`overview-tab ${tab === 'spot' ? 'active' : ''}`}
+              onClick={() => setTab('spot')}
+            >
+              SPOT
+            </button>
+            <button
+              type="button"
+              className={`overview-tab ${tab === 'futures' ? 'active' : ''}`}
+              onClick={() => setTab('futures')}
+            >
+              FUTURES
+            </button>
+          </div>
+          <div className="overview-filter">
+            <label>Exchange</label>
+            <select value={exchangeFilter} onChange={(e) => setExchangeFilter(e.target.value)}>
+              <option value="">All</option>
+              {exchanges.map((ex) => (
+                <option key={ex} value={ex}>
+                  {ex.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

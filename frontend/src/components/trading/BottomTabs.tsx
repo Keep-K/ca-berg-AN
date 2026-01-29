@@ -10,6 +10,8 @@ interface BottomTabsProps {
   historyOrderColumns: any[];
   tradeHistory: any[];
   tradeColumns: any[];
+  transactions?: any[];
+  assets?: any[];
 }
 
 type TabKey =
@@ -60,9 +62,12 @@ export default function BottomTabs({
   historyOrderColumns,
   tradeHistory,
   tradeColumns,
+  transactions,
+  assets,
 }: BottomTabsProps) {
   const [active, setActive] = useState<TabKey>('openOrders');
-  const transactions = useMemo(() => buildTransactions(), []);
+  const fallbackTransactions = useMemo(() => buildTransactions(), []);
+  const txRows = transactions && transactions.length > 0 ? transactions : fallbackTransactions;
 
   return (
     <div className="bottom-tabs">
@@ -103,20 +108,20 @@ export default function BottomTabs({
               <span>Status</span>
               <span>TxID</span>
             </div>
-            {transactions.map((tx, idx) => (
-              <div key={`${tx.rawTxId}-${idx}`} className="row">
-                <span>{tx.time}</span>
-                <span>{tx.exchange}</span>
+            {txRows.map((tx, idx) => (
+              <div key={`${tx.txid || tx.rawTxId || idx}`} className="row">
+                <span>{tx.time ? new Date(tx.time).toLocaleString() : tx.time}</span>
+                <span>{tx.exchange || 'BINANCE'}</span>
                 <span>{tx.type}</span>
                 <span>{tx.asset}</span>
-                <span className="mono">{tx.amount}</span>
-                <span className={`status ${tx.status.toLowerCase()}`}>{tx.status}</span>
+                <span className="mono">{Number(tx.amount).toFixed(6)}</span>
+                <span className={`status ${(tx.status || 'Completed').toLowerCase()}`}>{tx.status || 'Completed'}</span>
                 <span className="txid">
-                  {tx.txid}
+                  {tx.txid || tx.rawTxId}
                   <button
                     type="button"
                     className="copy"
-                    onClick={() => navigator.clipboard?.writeText(tx.rawTxId)}
+                    onClick={() => navigator.clipboard?.writeText(tx.rawTxId || tx.txid || '')}
                   >
                     Copy
                   </button>
@@ -126,7 +131,28 @@ export default function BottomTabs({
           </div>
         )}
         {active === 'assets' && (
-          <div className="empty-state compact">Coming soon</div>
+          <div className="panel-body table dense scroll">
+            <div className="row header">
+              <span>Asset</span>
+              <span>Wallet Balance</span>
+              <span>Unrealized PnL</span>
+              <span>Margin Balance</span>
+              <span>Available</span>
+            </div>
+            {(assets || []).length === 0 ? (
+              <div className="empty-state compact">No assets</div>
+            ) : (
+              (assets || []).map((a, idx) => (
+                <div key={`${a.asset}-${idx}`} className="row">
+                  <span>{a.asset}</span>
+                  <span className="mono">{Number(a.walletBalance).toFixed(6)}</span>
+                  <span className="mono">{Number(a.unrealizedPnl).toFixed(6)}</span>
+                  <span className="mono">{Number(a.marginBalance).toFixed(6)}</span>
+                  <span className="mono">{Number(a.availableBalance).toFixed(6)}</span>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </div>
     </div>

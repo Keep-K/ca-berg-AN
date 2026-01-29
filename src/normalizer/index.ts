@@ -34,6 +34,7 @@ export class BaseNormalizer implements Normalizer {
       usdValue,
       exchange,
       timestamp: Date.now(),
+      accountType: raw.accountType,
     };
   }
 

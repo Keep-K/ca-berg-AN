@@ -86,7 +86,7 @@ export class BinanceConnector implements ExchangeConnector, TradingConnector {
 
     const baseURL = credentials.sandbox
       ? normalizeSpotBase(
-          process.env.BINANCE_SPOT_TESTNET_BASE_URL || 'https://testnet.binance.vision'
+          process.env.BINANCE_SPOT_TESTNET_BASE_URL || 'https://demo-api.binance.com/api'
         )
       : normalizeSpotBase(process.env.BINANCE_SPOT_BASE_URL || 'https://api.binance.com');
 
@@ -183,6 +183,7 @@ export class BinanceConnector implements ExchangeConnector, TradingConnector {
           asset: b.asset,
           free: parseFloat(b.free),
           locked: parseFloat(b.locked),
+          accountType: 'spot' as const,
         }));
       console.log(`[Binance] Fetched ${spotBalances.length} spot balances`);
     } catch (spotError: any) {
@@ -237,6 +238,7 @@ export class BinanceConnector implements ExchangeConnector, TradingConnector {
             asset: b.asset,
             free: available,
             locked: locked,
+            accountType: 'futures' as const,
           };
         });
       
@@ -427,6 +429,112 @@ export class BinanceConnector implements ExchangeConnector, TradingConnector {
     } catch (error: any) {
       throw new Error(`Binance fetchTradeHistory failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Fetch order history for a symbol (Spot/Futures)
+   */
+  async fetchOrderHistory(symbol: string, market: 'spot' | 'futures', limit: number = 50): Promise<RawOrder[]> {
+    const symbolClean = symbol.replace('/', '');
+    const isFutures = market === 'futures';
+    const client = isFutures ? this.futuresClient : this.spotClient;
+    const endpoint = isFutures ? '/fapi/v1/allOrders' : '/allOrders';
+    const data = await this.authenticatedRequest(client, endpoint, {
+      symbol: symbolClean,
+      limit,
+    });
+
+    const orders = Array.isArray(data) ? data : [];
+    return orders.map((o: any) => ({
+      symbol: o.symbol,
+      side: o.side?.toLowerCase() as 'buy' | 'sell',
+      type: o.type,
+      price: parseFloat(o.price || '0'),
+      quantity: parseFloat(o.origQty || o.origQuantity || '0'),
+      status: o.status?.toLowerCase(),
+      orderId: o.orderId?.toString() || o.clientOrderId,
+      timestamp: o.time || o.updateTime || Date.now(),
+    }));
+  }
+
+  /**
+   * Fetch trade history for a symbol (Spot/Futures)
+   */
+  async fetchTradesBySymbol(symbol: string, market: 'spot' | 'futures', limit: number = 50): Promise<RawTrade[]> {
+    const symbolClean = symbol.replace('/', '');
+    const isFutures = market === 'futures';
+    const client = isFutures ? this.futuresClient : this.spotClient;
+    const endpoint = isFutures ? '/fapi/v1/userTrades' : '/myTrades';
+    const data = await this.authenticatedRequest(client, endpoint, {
+      symbol: symbolClean,
+      limit,
+    });
+
+    const trades = Array.isArray(data) ? data : [];
+    return trades.map((t: any) => ({
+      symbol: t.symbol,
+      side: t.side?.toLowerCase() as 'buy' | 'sell',
+      price: parseFloat(t.price),
+      quantity: parseFloat(t.qty),
+      fee: parseFloat(t.commission || '0'),
+      feeAsset: t.commissionAsset,
+      timestamp: t.time,
+      tradeId: t.id?.toString() || t.tradeId?.toString(),
+    }));
+  }
+
+  /**
+   * Fetch futures account assets (wallet/margin/available)
+   */
+  async fetchFuturesAssets(): Promise<any[]> {
+    const data = await this.authenticatedRequest(this.futuresClient, '/fapi/v2/account');
+    const assets = Array.isArray(data?.assets) ? data.assets : [];
+    return assets.map((a: any) => ({
+      asset: a.asset,
+      walletBalance: parseFloat(a.walletBalance || '0'),
+      unrealizedPnl: parseFloat(a.unrealizedProfit || '0'),
+      marginBalance: parseFloat(a.marginBalance || '0'),
+      availableBalance: parseFloat(a.availableBalance || '0'),
+    }));
+  }
+
+  /**
+   * Fetch spot account assets (wallet/available)
+   */
+  async fetchSpotAssets(): Promise<any[]> {
+    const data = await this.authenticatedRequest(this.spotClient, '/account');
+    const balances = Array.isArray(data?.balances) ? data.balances : [];
+    return balances.map((b: any) => {
+      const free = parseFloat(b.free || '0');
+      const locked = parseFloat(b.locked || '0');
+      return {
+        asset: b.asset,
+        walletBalance: free + locked,
+        unrealizedPnl: 0,
+        marginBalance: free + locked,
+        availableBalance: free,
+      };
+    });
+  }
+
+  /**
+   * Fetch futures income/transaction history
+   */
+  async fetchFuturesIncome(limit: number = 20): Promise<any[]> {
+    const data = await this.authenticatedRequest(this.futuresClient, '/fapi/v1/income', {
+      limit,
+    });
+    const incomes = Array.isArray(data) ? data : [];
+    return incomes.map((i: any) => ({
+      time: i.time,
+      exchange: this.exchangeName,
+      type: i.incomeType,
+      asset: i.asset,
+      amount: parseFloat(i.income || '0'),
+      status: 'Completed',
+      symbol: i.symbol,
+      txid: i.tranId?.toString(),
+    }));
   }
 
   /**
@@ -648,6 +756,20 @@ export class BinanceConnector implements ExchangeConnector, TradingConnector {
       
       endpoint = isFutures ? '/fapi/v1/order' : '/order';
       const client = isFutures ? this.futuresClient : this.spotClient;
+
+      if (isFutures && params.leverage) {
+        try {
+          await this.authenticatedRequest(
+            this.futuresClient,
+            '/fapi/v1/leverage',
+            { symbol, leverage: params.leverage },
+            'POST'
+          );
+        } catch (levError: any) {
+          const levMsg = levError.response?.data?.msg || levError.message || 'Failed to set leverage';
+          throw new Error(`Binance leverage set failed: ${levMsg}`);
+        }
+      }
 
       const orderParams: any = {
         symbol,

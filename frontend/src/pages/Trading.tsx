@@ -5,6 +5,7 @@ import ChartPanel from '../components/trading/ChartPanel';
 import OrderEntryPanel from '../components/trading/OrderEntryPanel';
 import OrderBookPanel from '../components/trading/OrderBookPanel';
 import RecentTradesPanel from '../components/trading/RecentTradesPanel';
+import MarketListPanel from '../components/trading/MarketListPanel';
 import BottomTabs from '../components/trading/BottomTabs';
 import './Trading.css';
 
@@ -45,6 +46,26 @@ interface TradeFill {
   exchange: string;
 }
 
+interface TransactionRow {
+  time: number | string;
+  exchange: string;
+  type: string;
+  asset: string;
+  amount: number;
+  status?: string;
+  txid?: string;
+  rawTxId?: string;
+  symbol?: string;
+}
+
+interface AssetRow {
+  asset: string;
+  walletBalance: number;
+  unrealizedPnl: number;
+  marginBalance: number;
+  availableBalance: number;
+}
+
 function Trading() {
   const [exchanges, setExchanges] = useState<string[]>([]);
   const [selectedExchange, setSelectedExchange] = useState<string>('');
@@ -53,6 +74,7 @@ function Trading() {
     side: 'buy' as 'buy' | 'sell',
     type: 'limit' as 'market' | 'limit',
     market: 'spot' as 'spot' | 'futures',
+    leverage: 20,
     quantity: '',
     price: '',
     reduceOnly: false,
@@ -62,6 +84,8 @@ function Trading() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [orderHistory, setOrderHistory] = useState<OrderResult[]>([]);
   const [tradeHistory, setTradeHistory] = useState<TradeFill[]>([]);
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [assets, setAssets] = useState<AssetRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -75,6 +99,8 @@ function Trading() {
     fetchPositions();
     fetchOrderHistory();
     fetchTradeHistory();
+    fetchTransactions();
+    fetchAssets();
 
     const openOrdersInterval = setInterval(fetchOpenOrders, 5000);
     const snapshotInterval = setInterval(fetchPositions, 10000);
@@ -88,7 +114,7 @@ function Trading() {
       clearInterval(snapshotInterval);
       clearInterval(historyInterval);
     };
-  }, [selectedExchange]);
+  }, [selectedExchange, orderForm.market]);
 
   const fetchExchanges = async () => {
     try {
@@ -157,7 +183,13 @@ function Trading() {
   const fetchOrderHistory = async () => {
     if (!selectedExchange) return;
     try {
-      const data = await apiClient.getOrderHistory({ exchange: selectedExchange, limit: 50 });
+      const symbolFilter = orderForm.symbol || positions[0]?.symbol;
+      const data = await apiClient.getOrderHistory({
+        exchange: selectedExchange,
+        symbol: symbolFilter,
+        limit: 50,
+        market: orderForm.market,
+      });
       setOrderHistory(data.orders || []);
     } catch (err: any) {
       console.error('Failed to fetch order history:', err);
@@ -168,11 +200,40 @@ function Trading() {
   const fetchTradeHistory = async () => {
     if (!selectedExchange) return;
     try {
-      const data = await apiClient.getTradeHistory({ exchange: selectedExchange, limit: 50 });
+      const symbolFilter = orderForm.symbol || positions[0]?.symbol;
+      const data = await apiClient.getTradeHistory({
+        exchange: selectedExchange,
+        symbol: symbolFilter,
+        limit: 50,
+        market: orderForm.market,
+      });
       setTradeHistory(data.trades || []);
     } catch (err: any) {
       console.error('Failed to fetch trade history:', err);
       setTradeHistory([]);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    if (!selectedExchange) return;
+    try {
+      const symbolFilter = orderForm.symbol || positions[0]?.symbol || 'BTCUSDT';
+      const data = await apiClient.getTransactions(selectedExchange, 20, orderForm.market, symbolFilter);
+      setTransactions(data.transactions || []);
+    } catch (err: any) {
+      console.error('Failed to fetch transactions:', err);
+      setTransactions([]);
+    }
+  };
+
+  const fetchAssets = async () => {
+    if (!selectedExchange) return;
+    try {
+      const data = await apiClient.getAssets(selectedExchange, orderForm.market);
+      setAssets(data.assets || []);
+    } catch (err: any) {
+      console.error('Failed to fetch assets:', err);
+      setAssets([]);
     }
   };
 
@@ -200,6 +261,10 @@ function Trading() {
         market: orderForm.market,
         quantity: parseFloat(orderForm.quantity),
       };
+
+      if (orderForm.market === 'futures') {
+        orderParams.leverage = orderForm.leverage;
+      }
 
       if (orderForm.type === 'limit') {
         orderParams.price = parseFloat(orderForm.price);
@@ -233,6 +298,7 @@ function Trading() {
         side: 'buy',
         type: 'limit',
         market: 'spot',
+        leverage: 20,
         quantity: '',
         price: '',
         reduceOnly: false,
@@ -290,6 +356,7 @@ function Trading() {
         side: closeSide,
         type: 'market',
         market: 'futures',
+        leverage: orderForm.leverage,
         quantity: position.size,
         reduceOnly: true,
       });
@@ -507,9 +574,30 @@ function Trading() {
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
 
-      <div className="trading-layout">
-        <div className="left-column">
-          <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
+      {orderForm.market === 'spot' ? (
+        <div className="spot-layout">
+          <div className="spot-grid">
+            <div className="spot-orderbook">
+              <OrderBookPanel />
+            </div>
+            <div className="spot-chart">
+              <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
+            </div>
+            <div className="spot-marketlist">
+              <MarketListPanel />
+            </div>
+            <div className="spot-orderentry">
+              <OrderEntryPanel
+                orderForm={orderForm}
+                setOrderForm={setOrderForm}
+                onSubmit={handlePlaceOrder}
+                loading={loading}
+              />
+            </div>
+            <div className="spot-trades">
+              <RecentTradesPanel />
+            </div>
+          </div>
           <BottomTabs
             positions={positions}
             positionColumns={positionColumns}
@@ -519,52 +607,72 @@ function Trading() {
             historyOrderColumns={historyOrderColumns}
             tradeHistory={tradeHistory}
             tradeColumns={tradeColumns}
+            transactions={transactions}
+            assets={assets}
           />
         </div>
-
-        <div className="right-column">
-          <div className="right-tabs">
-            <button
-              type="button"
-              className={rightPanelTab === 'order' ? 'active' : ''}
-              onClick={() => setRightPanelTab('order')}
-            >
-              Order
-            </button>
-            <button
-              type="button"
-              className={rightPanelTab === 'orderbook' ? 'active' : ''}
-              onClick={() => setRightPanelTab('orderbook')}
-            >
-              Order Book
-            </button>
-            <button
-              type="button"
-              className={rightPanelTab === 'trades' ? 'active' : ''}
-              onClick={() => setRightPanelTab('trades')}
-            >
-              Trades
-            </button>
+      ) : (
+        <div className="trading-layout">
+          <div className="left-column">
+            <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
+            <BottomTabs
+              positions={positions}
+              positionColumns={positionColumns}
+              openOrders={openOrders}
+              orderColumns={orderColumns}
+              orderHistory={orderHistory}
+              historyOrderColumns={historyOrderColumns}
+              tradeHistory={tradeHistory}
+              tradeColumns={tradeColumns}
+              transactions={transactions}
+              assets={assets}
+            />
           </div>
 
-          <div className="right-panels">
-            <div className={`right-panel ${rightPanelTab === 'order' ? 'is-active' : ''}`}>
-              <OrderEntryPanel
-                orderForm={orderForm}
-                setOrderForm={setOrderForm}
-                onSubmit={handlePlaceOrder}
-                loading={loading}
-              />
+          <div className="right-column">
+            <div className="right-tabs">
+              <button
+                type="button"
+                className={rightPanelTab === 'order' ? 'active' : ''}
+                onClick={() => setRightPanelTab('order')}
+              >
+                Order
+              </button>
+              <button
+                type="button"
+                className={rightPanelTab === 'orderbook' ? 'active' : ''}
+                onClick={() => setRightPanelTab('orderbook')}
+              >
+                Order Book
+              </button>
+              <button
+                type="button"
+                className={rightPanelTab === 'trades' ? 'active' : ''}
+                onClick={() => setRightPanelTab('trades')}
+              >
+                Trades
+              </button>
             </div>
-            <div className={`right-panel ${rightPanelTab === 'orderbook' ? 'is-active' : ''}`}>
-              <OrderBookPanel />
-            </div>
-            <div className={`right-panel ${rightPanelTab === 'trades' ? 'is-active' : ''}`}>
-              <RecentTradesPanel />
+
+            <div className="right-panels">
+              <div className={`right-panel ${rightPanelTab === 'order' ? 'is-active' : ''}`}>
+                <OrderEntryPanel
+                  orderForm={orderForm}
+                  setOrderForm={setOrderForm}
+                  onSubmit={handlePlaceOrder}
+                  loading={loading}
+                />
+              </div>
+              <div className={`right-panel ${rightPanelTab === 'orderbook' ? 'is-active' : ''}`}>
+                <OrderBookPanel />
+              </div>
+              <div className={`right-panel ${rightPanelTab === 'trades' ? 'is-active' : ''}`}>
+                <RecentTradesPanel />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

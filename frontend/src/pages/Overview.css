@@ -14,6 +14,12 @@
   gap: 16px;
 }
 
+.overview-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .overview-tabs {
   display: flex;
   gap: 0;
@@ -44,6 +50,30 @@
 .overview-tab.active {
   color: #fff;
   background: #2a2d3a;
+}
+
+.overview-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1a1d29;
+  border: 1px solid #2a2d3a;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.overview-filter label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.overview-filter select {
+  background: #0f1116;
+  border: 1px solid #2a2d3a;
+  color: #e4e4e7;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .page-header h1 {

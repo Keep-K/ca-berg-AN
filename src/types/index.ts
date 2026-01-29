@@ -8,6 +8,7 @@ export interface RawBalance {
   asset: string;
   free: number;
   locked: number;
+  accountType?: 'spot' | 'futures';
   [key: string]: any; // Exchange-specific fields
 }
 
@@ -54,6 +55,7 @@ export interface UnifiedBalance {
   usdValue: number;
   exchange: string;
   timestamp: number;
+  accountType?: 'spot' | 'futures';
 }
 
 export interface UnifiedPosition {
@@ -211,6 +213,7 @@ export interface OrderParams {
   quantity: number;
   price?: number;
   market?: 'spot' | 'futures';
+  leverage?: number;
   reduceOnly?: boolean;
   timeInForce?: 'GTC' | 'IOC' | 'FOK';
   stopPrice?: number;

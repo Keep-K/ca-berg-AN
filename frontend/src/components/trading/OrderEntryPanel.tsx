@@ -5,6 +5,7 @@ interface OrderFormState {
   side: 'buy' | 'sell';
   type: 'limit' | 'market';
   market: 'spot' | 'futures';
+  leverage: number;
   quantity: string;
   price: string;
   reduceOnly: boolean;
@@ -50,6 +51,26 @@ export default function OrderEntryPanel({ orderForm, setOrderForm, onSubmit, loa
         <h3>Order Entry</h3>
         <span className="badge">{orderForm.market === 'spot' ? 'Spot' : 'Futures'}</span>
       </div>
+
+      {orderForm.market === 'futures' && (
+        <div className="field leverage-row">
+          <label>Leverage</label>
+          <div className="leverage-controls">
+            <select
+              value={`${orderForm.leverage}`}
+              aria-label="Leverage"
+              onChange={(e) => setOrderForm({ ...orderForm, leverage: parseInt(e.target.value, 10) })}
+            >
+              {[1, 2, 3, 5, 10, 20, 50, 100].map((lv) => (
+                <option key={lv} value={lv}>
+                  {lv}x
+                </option>
+              ))}
+            </select>
+            <span className="hint">Applied on futures order</span>
+          </div>
+        </div>
+      )}
 
       <div className="segment">
         <button

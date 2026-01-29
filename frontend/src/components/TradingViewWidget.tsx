@@ -20,6 +20,7 @@ function TradingViewWidget({ symbol, interval = '60', theme = 'dark' }: TradingV
 
   useEffect(() => {
     let isMounted = true;
+    let cleanupLoad: (() => void) | null = null;
 
     const initWidget = () => {
       if (!isMounted || !window.TradingView) return;
@@ -44,30 +45,32 @@ function TradingViewWidget({ symbol, interval = '60', theme = 'dark' }: TradingV
       initWidget();
     } else {
       const scriptId = 'tradingview-widget-script';
-      if (!document.getElementById(scriptId)) {
+      const existing = document.getElementById(scriptId) as HTMLScriptElement | null;
+      if (!existing) {
         const script = document.createElement('script');
         script.id = scriptId;
         script.src = 'https://s3.tradingview.com/tv.js';
         script.async = true;
-        script.onload = initWidget;
+        const onLoad = () => initWidget();
+        script.addEventListener('load', onLoad, { once: true });
+        cleanupLoad = () => script.removeEventListener('load', onLoad);
         document.body.appendChild(script);
       } else {
-        const existing = document.getElementById(scriptId) as HTMLScriptElement;
-        if (existing && existing.onload) {
-          // no-op, wait for onload
-        } else {
-          const intervalId = window.setInterval(() => {
-            if (window.TradingView) {
-              window.clearInterval(intervalId);
-              initWidget();
-            }
-          }, 200);
-        }
+        const onLoad = () => initWidget();
+        existing.addEventListener('load', onLoad, { once: true });
+        cleanupLoad = () => existing.removeEventListener('load', onLoad);
+        const intervalId = window.setInterval(() => {
+          if (window.TradingView) {
+            window.clearInterval(intervalId);
+            initWidget();
+          }
+        }, 200);
       }
     }
 
     return () => {
       isMounted = false;
+      if (cleanupLoad) cleanupLoad();
       const container = document.getElementById(containerId);
       if (container) {
         container.innerHTML = '';

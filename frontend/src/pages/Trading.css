@@ -190,54 +190,6 @@
   color: #9ca3af;
 }
 
-.chart-actions .chip {
-  padding: 3px 7px;
-  font-size: 10px;
-  border-radius: 999px;
-  border: 1px solid #334155;
-  background: #1f2937;
-  color: #e5e7eb;
-  margin-left: 6px;
-}
-.chart-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border-bottom: 1px solid #1f2430;
-  margin-bottom: 6px;
-}
-
-.toolbar-btn {
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid #2b3443;
-  background: #12151c;
-  color: #9ca3af;
-  font-size: 11px;
-}
-
-.toolbar-btn.active {
-  color: #e5e7eb;
-  background: #1f2430;
-  border-color: #374151;
-}
-
-.toolbar-btn.ghost {
-  background: transparent;
-}
-
-.toolbar-note {
-  margin-left: auto;
-  font-size: 11px;
-  color: #9ca3af;
-}
-
-
-.chart-actions .chip.ghost {
-  background: transparent;
-  color: #9ca3af;
-}
 
 .chart-body {
   height: 440px;
@@ -303,15 +255,15 @@
 }
 
 .segment-btn.active.buy {
-  border-color: #22c55e;
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
+  border-color: #16a34a;
+  color: #ffffff;
+  background: #16a34a;
 }
 
 .segment-btn.active.sell {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
+  border-color: #dc2626;
+  color: #ffffff;
+  background: #dc2626;
 }
 
 .tabs {
@@ -365,6 +317,30 @@
   border-radius: 6px;
   color: #e5e7eb;
   font-size: 12px;
+}
+
+.leverage-row {
+  margin-bottom: 6px;
+}
+
+.leverage-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leverage-controls select {
+  padding: 5px 7px;
+  background: #12151c;
+  border: 1px solid #252b38;
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-size: 12px;
+}
+
+.leverage-controls .hint {
+  font-size: 10px;
+  color: #6b7280;
 }
 
 .quick-pct {
@@ -455,6 +431,105 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.spot-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spot-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.spot-orderbook {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-self: stretch;
+}
+
+.spot-chart {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.spot-marketlist {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.spot-orderentry {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.spot-trades {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.marketlist-panel .row {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.spot-layout .panel {
+  border-radius: 4px;
+  padding: 6px;
+  background: #0f1116;
+}
+
+.spot-layout .panel-header {
+  margin-bottom: 6px;
+}
+
+.spot-layout .panel-header h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.marketlist-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.marketlist-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.marketlist-tabs button {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #2b3443;
+  background: #12151c;
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.marketlist-tabs button.active {
+  color: #e5e7eb;
+  border-color: #4b5563;
+  background: #1f2430;
+}
+
+.marketlist-search {
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: 4px;
+  border: 1px solid #252b38;
+  background: #12151c;
+  color: #e5e7eb;
+  font-size: 11px;
 }
 
 .table.dense {
@@ -653,6 +728,22 @@
   max-height: 240px;
 }
 
+.spot-orderbook .panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.spot-orderbook .panel-body {
+  max-height: none;
+  flex: 1;
+}
+
+.spot-orderbook .table.dense.scroll {
+  max-height: none;
+  height: 100%;
+}
+
 .right-panel {
   display: block;
 }
@@ -660,6 +751,10 @@
 @media (max-width: 1200px) {
   .trading-layout {
     grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .spot-grid {
+    grid-template-columns: 240px minmax(0, 1fr) 260px;
   }
 }
 
@@ -679,6 +774,19 @@
 
   .right-panels .right-panel.is-active {
     display: block;
+  }
+
+  .spot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .spot-orderbook,
+  .spot-chart,
+  .spot-marketlist,
+  .spot-orderentry,
+  .spot-trades {
+    grid-column: 1;
+    grid-row: auto;
   }
 }
 
