@@ -12,6 +12,46 @@
   color: #fff;
 }
 
+.portfolio-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.portfolio-asset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expand-btn,
+.expand-btn-placeholder {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #9ca3af;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.expand-btn:hover {
+  color: #fff;
+  background: #2a2d3a;
+}
+
+.expand-btn-placeholder {
+  visibility: hidden;
+  cursor: default;
+}
+
 .loading {
   padding: 40px;
   text-align: center;

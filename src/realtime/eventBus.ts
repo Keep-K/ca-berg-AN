@@ -43,19 +43,17 @@ export class EventBus {
   }
 
   /**
-   * Publish real-time update
+   * Publish real-time update (optional userId for per-user WebSocket delivery)
    */
-  async publishUpdate(update: RealtimeUpdate): Promise<void> {
+  async publishUpdate(update: RealtimeUpdate, userId?: number): Promise<void> {
     if (!this.isConnected || !this.publisher) {
       console.warn('[EventBus] Not connected, update not published');
       return;
     }
 
     try {
-      await this.publisher.publish(
-        'portfolio:updates',
-        JSON.stringify(update)
-      );
+      const payload = userId !== undefined ? JSON.stringify({ update, userId }) : JSON.stringify(update);
+      await this.publisher.publish('portfolio:updates', payload);
     } catch (error) {
       console.error('[EventBus] Failed to publish update:', error);
     }
@@ -78,9 +76,9 @@ export class EventBus {
   }
 
   /**
-   * Subscribe to updates
+   * Subscribe to updates (callback receives update and optional userId for per-user filtering)
    */
-  async subscribeToUpdates(callback: (update: RealtimeUpdate) => void): Promise<void> {
+  async subscribeToUpdates(callback: (update: RealtimeUpdate, userId?: number) => void): Promise<void> {
     if (!this.isConnected || !this.subscriber) {
       console.warn('[EventBus] Not connected, cannot subscribe');
       return;
@@ -89,8 +87,12 @@ export class EventBus {
     try {
       await this.subscriber.subscribe('portfolio:updates', (message) => {
         try {
-          const update = JSON.parse(message) as RealtimeUpdate;
-          callback(update);
+          const parsed = JSON.parse(message);
+          if (parsed && typeof parsed.update !== 'undefined') {
+            callback(parsed.update as RealtimeUpdate, parsed.userId);
+          } else {
+            callback(parsed as RealtimeUpdate);
+          }
         } catch (error) {
           console.error('[EventBus] Failed to parse update message:', error);
         }

@@ -19,10 +19,12 @@ export class ExecutionEngine {
   private connectors: Map<string, TradingConnector & ExchangeConnector> = new Map();
   private portfolioManager: PortfolioManager;
   private eventBus: EventBus;
+  private userId: number;
 
-  constructor(portfolioManager: PortfolioManager, eventBus: EventBus) {
+  constructor(portfolioManager: PortfolioManager, eventBus: EventBus, userId: number) {
     this.portfolioManager = portfolioManager;
     this.eventBus = eventBus;
+    this.userId = userId;
   }
 
   /**
@@ -122,13 +124,13 @@ export class ExecutionEngine {
 
       // Store order in database (don't fail if DB is unavailable)
       try {
-        await orderStore.storeOrder(orderResult);
+        await orderStore.storeOrder(orderResult, this.userId);
       } catch (dbError: any) {
         console.warn(`[ExecutionEngine] Failed to store order in database: ${dbError.message}. Order was placed successfully on exchange.`);
         // Continue - order was placed successfully on exchange
       }
 
-      // Emit order update via WebSocket
+      // Emit order update via WebSocket (with userId for per-user delivery)
       try {
         await this.eventBus.publishUpdate({
           type: 'order',
@@ -136,7 +138,7 @@ export class ExecutionEngine {
             ...orderResult,
             exchange: connector.exchangeName,
           } as any,
-        });
+        }, this.userId);
       } catch (eventError: any) {
         console.warn(`[ExecutionEngine] Failed to emit order update: ${eventError.message}`);
         // Continue - order was placed successfully
@@ -170,7 +172,7 @@ export class ExecutionEngine {
         console.warn(`[ExecutionEngine] Failed to update order in database: ${dbError.message}. Order was canceled successfully on exchange.`);
       }
 
-      // Emit cancellation update
+      // Emit cancellation update (with userId for per-user delivery)
       try {
         await this.eventBus.publishUpdate({
           type: 'order',
@@ -181,7 +183,7 @@ export class ExecutionEngine {
             exchange: connector.exchangeName,
             timestamp: Date.now(),
           } as any,
-        });
+        }, this.userId);
       } catch (eventError: any) {
         console.warn(`[ExecutionEngine] Failed to emit cancellation update: ${eventError.message}`);
       }
@@ -255,5 +257,16 @@ export class ExecutionEngine {
    */
   getConnector(exchangeName: string): (TradingConnector & ExchangeConnector) | undefined {
     return this.connectors.get(exchangeName.toLowerCase());
+  }
+
+  /**
+   * Remove a trading connector
+   */
+  removeConnector(exchangeName: string): void {
+    const connector = this.connectors.get(exchangeName.toLowerCase());
+    if (connector && typeof (connector as any).unsubscribeRealtimeUpdates === 'function') {
+      (connector as any).unsubscribeRealtimeUpdates();
+    }
+    this.connectors.delete(exchangeName.toLowerCase());
   }
 }

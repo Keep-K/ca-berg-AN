@@ -724,6 +724,53 @@ export class BinanceConnector implements ExchangeConnector, TradingConnector {
         type: params.type,
       });
 
+      // Special handling for Futures reduce-only close orders
+      // Binance returns -2022 "ReduceOnly Order is rejected." when there is
+      // effectively no position left to reduce. From the user's point of view
+      // this is equivalent to "already closed", so we treat it as a success
+      // if we can confirm there is no remaining position.
+      if (
+        statusCode === 400 &&
+        errorCode === -2022 &&
+        params.reduceOnly &&
+        params.market === 'futures'
+      ) {
+        try {
+          const positions = await this.fetchPositions();
+          const current = positions.find((p) => p.symbol === (symbol || params.symbol));
+
+          if (!current || Math.abs(current.size) < 1e-8) {
+            console.warn(
+              `[Binance] Reduce-only order rejected with -2022 but no open position for ${
+                symbol || params.symbol
+              }. Treating as already closed.`
+            );
+
+            const now = Date.now();
+            return {
+              orderId: `virtual-close-${now}`,
+              symbol: params.symbol,
+              side: params.side,
+              type: params.type,
+              status: 'filled',
+              price: 0,
+              quantity: params.quantity,
+              filledQuantity: params.quantity,
+              remainingQuantity: 0,
+              timestamp: now,
+              exchange: this.exchangeName,
+              clientOrderId: `virtual-close-${now}`,
+            };
+          }
+        } catch (verifyError: any) {
+          console.warn(
+            '[Binance] Failed to verify positions after -2022 reduce-only rejection:',
+            verifyError.message || verifyError
+          );
+        }
+        // If we reach here, there is still an open position – fall through to normal error handling.
+      }
+
       // Provide more helpful error messages
       if (statusCode === 400) {
         if (errorCode === -1013) {

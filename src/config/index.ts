@@ -25,6 +25,10 @@ export const config = {
   security: {
     encryptionKey: process.env.ENCRYPTION_KEY || '',
   },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'supersecretkey',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  },
   rateLimits: {
     binance: parseInt(process.env.BINANCE_RATE_LIMIT || '1200', 10),
     bybit: parseInt(process.env.BYBIT_RATE_LIMIT || '120', 10),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
 import DataTable from '../components/DataTable';
 import TradingViewWidget from '../components/TradingViewWidget';
@@ -87,30 +87,24 @@ function Trading() {
 
   const fetchExchanges = async () => {
     try {
-      // Get trading-enabled exchanges
-      const response = await fetch('/api/trade/exchanges');
-      const data = await response.json();
+      const data = await apiClient.getTradeExchanges();
       const tradingExchanges = data.exchanges || [];
-      
-      // Fallback to all exchanges if no trading exchanges
-      if (tradingExchanges.length === 0) {
-        const allData = await apiClient.getExchanges();
-        setExchanges(allData.exchanges || []);
-      } else {
+      if (tradingExchanges.length > 0) {
         setExchanges(tradingExchanges);
-      }
-      
-      if (tradingExchanges.length > 0 && !selectedExchange) {
-        setSelectedExchange(tradingExchanges[0]);
+        if (!selectedExchange) setSelectedExchange(tradingExchanges[0]);
+      } else {
+        const allData = await apiClient.getExchanges();
+        const list = allData.exchanges || [];
+        setExchanges(list);
+        if (list.length > 0 && !selectedExchange) setSelectedExchange(list[0]);
       }
     } catch (err) {
       console.error('Failed to fetch exchanges:', err);
-      // Fallback to regular exchanges API
       try {
-        const data = await apiClient.getExchanges();
-        setExchanges(data.exchanges || []);
-        if (data.exchanges && data.exchanges.length > 0 && !selectedExchange) {
-          setSelectedExchange(data.exchanges[0]);
+        const allData = await apiClient.getExchanges();
+        setExchanges(allData.exchanges || []);
+        if (allData.exchanges?.length > 0 && !selectedExchange) {
+          setSelectedExchange(allData.exchanges[0]);
         }
       } catch (fallbackErr) {
         console.error('Failed to fetch exchanges (fallback):', fallbackErr);
@@ -121,21 +115,12 @@ function Trading() {
   const fetchOpenOrders = async () => {
     if (!selectedExchange) return;
     try {
-      const response = await fetch(`/api/trade/open-orders?exchange=${selectedExchange}`);
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-      
-      if (!response.ok) {
-        setError(data.error || 'Failed to fetch open orders');
-        setOpenOrders([]);
-        return;
-      }
-      
+      const data = await apiClient.getOpenOrders(selectedExchange);
       setOpenOrders(data.orders || []);
       setError(null);
     } catch (err: any) {
       console.error('Failed to fetch open orders:', err);
-      setError(`Network error: ${err.message || 'Failed to fetch open orders'}`);
+      setError(err.response?.data?.error || err.message || 'Failed to fetch open orders');
       setOpenOrders([]);
     }
   };
@@ -167,16 +152,7 @@ function Trading() {
   const fetchOrderHistory = async () => {
     if (!selectedExchange) return;
     try {
-      const response = await fetch(`/api/trade/history?exchange=${selectedExchange}&limit=50`);
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-
-      if (!response.ok) {
-        console.error('Failed to fetch order history:', data.error || 'Unknown error');
-        setOrderHistory([]);
-        return;
-      }
-
+      const data = await apiClient.getOrderHistory({ exchange: selectedExchange, limit: 50 });
       setOrderHistory(data.orders || []);
     } catch (err: any) {
       console.error('Failed to fetch order history:', err);
@@ -187,16 +163,7 @@ function Trading() {
   const fetchTradeHistory = async () => {
     if (!selectedExchange) return;
     try {
-      const response = await fetch(`/api/trade/trades?exchange=${selectedExchange}&limit=50`);
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-
-      if (!response.ok) {
-        console.error('Failed to fetch trade history:', data.error || 'Unknown error');
-        setTradeHistory([]);
-        return;
-      }
-
+      const data = await apiClient.getTradeHistory({ exchange: selectedExchange, limit: 50 });
       setTradeHistory(data.trades || []);
     } catch (err: any) {
       console.error('Failed to fetch trade history:', err);
@@ -241,19 +208,7 @@ function Trading() {
         orderParams.postOnly = true;
       }
 
-      const response = await fetch('/api/trade/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderParams),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        const errorMessage = result.error || result.details || 'Failed to place order';
-        console.error('Order placement error:', result);
-        throw new Error(errorMessage);
-      }
+      const result = await apiClient.placeOrder(orderParams);
 
       const successMsg = `✅ Order placed successfully! 
         Order ID: ${result.orderId}
@@ -299,21 +254,7 @@ function Trading() {
     }
 
     try {
-      const response = await fetch('/api/trade/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exchange: selectedExchange,
-          orderId,
-          symbol,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to cancel order');
-      }
+      await apiClient.cancelOrder(selectedExchange, orderId, symbol);
 
       setSuccess(`✅ Order canceled successfully! Order ID: ${orderId}`);
       setError(null);
@@ -338,24 +279,15 @@ function Trading() {
     try {
       const closeSide = position.side === 'long' ? 'sell' : 'buy';
 
-      const response = await fetch('/api/trade/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exchange: selectedExchange,
-          symbol: position.symbol,
-          side: closeSide,
-          type: 'market',
-          market: 'futures',
-          quantity: position.size,
-          reduceOnly: true,
-        }),
+      await apiClient.placeOrder({
+        exchange: selectedExchange,
+        symbol: position.symbol,
+        side: closeSide,
+        type: 'market',
+        market: 'futures',
+        quantity: position.size,
+        reduceOnly: true,
       });
-
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to close position');
-      }
 
       setSuccess(`✅ Position closed: ${position.symbol} (${position.side})`);
       setError(null);
@@ -714,11 +646,7 @@ function Trading() {
                 className="btn-secondary btn-sm"
                 onClick={() => {
                   if (confirm('Cancel all open orders?')) {
-                    fetch('/api/trade/cancel-all', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ exchange: selectedExchange }),
-                    })
+                    apiClient.cancelAllOrders(selectedExchange)
                       .then(() => fetchOpenOrders())
                       .catch(console.error);
                   }

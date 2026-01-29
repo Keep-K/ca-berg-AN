@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { apiClient } from '../services/api';
 import DataTable from '../components/DataTable';
+import { FilterBar } from '../components/FilterBar';
 import './Positions.css';
 
 interface Position {
@@ -17,6 +18,8 @@ interface Position {
 function Positions() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exchangeFilter, setExchangeFilter] = useState('');
+  const [marketTypeFilter, setMarketTypeFilter] = useState('');
 
   useEffect(() => {
     fetchPositions();
@@ -26,29 +29,36 @@ function Positions() {
 
   const fetchPositions = async () => {
     try {
-      // Try latest snapshot first, if 404 then fetch new snapshot
       let snapshot;
       try {
         snapshot = await apiClient.getLatestSnapshot();
       } catch (err: any) {
         if (err.response?.status === 404) {
-          // No snapshot exists, fetch a new one
-          console.log('[Positions] No snapshot found, fetching new snapshot...');
           snapshot = await apiClient.getPortfolioSnapshot();
-        } else {
-          throw err;
-        }
+        } else throw err;
       }
-      
       setPositions(snapshot?.positions || []);
-      setLoading(false);
     } catch (err) {
       console.error('Failed to fetch positions:', err);
+    } finally {
       setLoading(false);
     }
   };
 
+  const filtered = useMemo(() => {
+    let list = positions;
+    if (exchangeFilter) list = list.filter((p) => p.exchange === exchangeFilter);
+    if (marketTypeFilter === 'spot') list = []; // positions are futures only
+    if (marketTypeFilter === 'futures') list = list; // all positions are futures
+    return list;
+  }, [positions, exchangeFilter, marketTypeFilter]);
+
   const columns = [
+    {
+      key: 'exchange',
+      header: 'Exchange',
+      render: (item: Position) => item.exchange.toUpperCase(),
+    },
     {
       key: 'symbol',
       header: 'Symbol',
@@ -74,13 +84,8 @@ function Positions() {
       render: (item: Position) => `$${item.entryPrice.toFixed(2)}`,
     },
     {
-      key: 'markPrice',
-      header: 'Mark Price',
-      render: (item: Position) => `$${item.markPrice.toFixed(2)}`,
-    },
-    {
       key: 'unrealizedPnl',
-      header: 'Unrealized PnL',
+      header: 'PnL',
       render: (item: Position) => (
         <span className={item.unrealizedPnl >= 0 ? 'text-green' : 'text-red'}>
           ${item.unrealizedPnl.toFixed(2)}
@@ -91,11 +96,6 @@ function Positions() {
       key: 'leverage',
       header: 'Leverage',
       render: (item: Position) => `${item.leverage}x`,
-    },
-    {
-      key: 'exchange',
-      header: 'Exchange',
-      render: (item: Position) => item.exchange.toUpperCase(),
     },
   ];
 
@@ -112,7 +112,14 @@ function Positions() {
       <div className="page-header">
         <h1>Positions</h1>
       </div>
-      <DataTable columns={columns} data={positions} emptyMessage="No open positions" />
+      <FilterBar
+        exchange={exchangeFilter}
+        onExchangeChange={setExchangeFilter}
+        marketType={marketTypeFilter}
+        onMarketTypeChange={setMarketTypeFilter}
+        showMarketType
+      />
+      <DataTable columns={columns} data={filtered} emptyMessage="No open positions" />
     </div>
   );
 }

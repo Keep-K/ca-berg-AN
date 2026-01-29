@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DataTable from '../components/DataTable';
+import { FilterBar } from '../components/FilterBar';
+import { apiClient } from '../services/api';
 import './TradeHistory.css';
 
 interface UnifiedTrade {
@@ -17,12 +19,8 @@ interface UnifiedTrade {
 function TradeHistory() {
   const [trades, setTrades] = useState<UnifiedTrade[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    exchange: '',
-    symbol: '',
-    startDate: '',
-    endDate: '',
-  });
+  const [exchangeFilter, setExchangeFilter] = useState('');
+  const [marketTypeFilter, setMarketTypeFilter] = useState('');
 
   useEffect(() => {
     fetchTrades();
@@ -30,59 +28,34 @@ function TradeHistory() {
 
   const fetchTrades = async () => {
     try {
-      const response = await fetch('/api/trade/trades?limit=100');
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-      
-      if (!response.ok) {
-        console.error('Failed to fetch trades:', data.error || 'Unknown error');
-        setTrades([]);
-        setLoading(false);
-        return;
-      }
-      
+      const data = await apiClient.getTradeHistory({ limit: 100 });
       setTrades(data.trades || []);
-      setLoading(false);
     } catch (err: any) {
       console.error('Failed to fetch trades:', err);
       setTrades([]);
+    } finally {
       setLoading(false);
     }
   };
 
-  const filteredTrades = trades.filter((trade) => {
-    if (filters.exchange && trade.exchange !== filters.exchange) return false;
-    if (filters.symbol && !trade.symbol.includes(filters.symbol.toUpperCase())) return false;
-    if (filters.startDate && trade.timestamp < new Date(filters.startDate).getTime()) return false;
-    if (filters.endDate && trade.timestamp > new Date(filters.endDate).getTime()) return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    let list = trades;
+    if (exchangeFilter) list = list.filter((t) => t.exchange === exchangeFilter);
+    return list;
+  }, [trades, exchangeFilter]);
 
   const columns = [
-    {
-      key: 'timestamp',
-      header: 'Time',
-      render: (item: UnifiedTrade) =>
-        new Date(item.timestamp).toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-    },
     {
       key: 'exchange',
       header: 'Exchange',
       render: (item: UnifiedTrade) => (
-        <span style={{ textTransform: 'uppercase', fontSize: '11px' }}>{item.exchange}</span>
+        <span style={{ textTransform: 'uppercase', fontSize: '12px' }}>{item.exchange}</span>
       ),
     },
     {
       key: 'symbol',
       header: 'Symbol',
-      render: (item: UnifiedTrade) => (
-        <span style={{ fontWeight: 500 }}>{item.symbol}</span>
-      ),
+      render: (item: UnifiedTrade) => <strong>{item.symbol}</strong>,
     },
     {
       key: 'side',
@@ -96,26 +69,40 @@ function TradeHistory() {
     {
       key: 'price',
       header: 'Price',
-      render: (item: UnifiedTrade) => `$${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      render: (item: UnifiedTrade) =>
+        `$${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     },
     {
       key: 'quantity',
-      header: 'Quantity',
+      header: 'Qty',
       render: (item: UnifiedTrade) => item.quantity.toFixed(4),
+    },
+    {
+      key: 'fee',
+      header: 'Fee',
+      render: (item: UnifiedTrade) => `$${(item.fee ?? 0).toFixed(2)}`,
     },
     {
       key: 'realizedPnl',
       header: 'Realized PnL',
       render: (item: UnifiedTrade) => (
-        <span className={item.realizedPnl >= 0 ? 'text-green' : 'text-red'}>
-          ${item.realizedPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <span className={(item.realizedPnl ?? 0) >= 0 ? 'text-green' : 'text-red'}>
+          ${(item.realizedPnl ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       ),
     },
     {
-      key: 'fee',
-      header: 'Fee',
-      render: (item: UnifiedTrade) => `$${item.fee.toFixed(2)}`,
+      key: 'timestamp',
+      header: 'Time',
+      render: (item: UnifiedTrade) =>
+        item.timestamp
+          ? new Date(item.timestamp).toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '—',
     },
   ];
 
@@ -124,40 +111,17 @@ function TradeHistory() {
       <div className="page-header">
         <h1>Trade History</h1>
       </div>
-      <div className="filters">
-        <input
-          type="text"
-          placeholder="Filter by exchange..."
-          value={filters.exchange}
-          onChange={(e) => setFilters({ ...filters, exchange: e.target.value })}
-          className="filter-input"
-        />
-        <input
-          type="text"
-          placeholder="Filter by symbol..."
-          value={filters.symbol}
-          onChange={(e) => setFilters({ ...filters, symbol: e.target.value })}
-          className="filter-input"
-        />
-        <input
-          type="date"
-          placeholder="Start date"
-          value={filters.startDate}
-          onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-          className="filter-input"
-        />
-        <input
-          type="date"
-          placeholder="End date"
-          value={filters.endDate}
-          onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-          className="filter-input"
-        />
-      </div>
+      <FilterBar
+        exchange={exchangeFilter}
+        onExchangeChange={setExchangeFilter}
+        marketType={marketTypeFilter}
+        onMarketTypeChange={setMarketTypeFilter}
+        showMarketType
+      />
       {loading ? (
         <div className="loading">Loading...</div>
       ) : (
-        <DataTable columns={columns} data={filteredTrades} emptyMessage="No trades found" />
+        <DataTable columns={columns} data={filtered} emptyMessage="No trades found" />
       )}
     </div>
   );

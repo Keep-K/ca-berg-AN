@@ -1,15 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './TopBar.css';
 
 function TopBar() {
   const [exchanges, setExchanges] = useState<string[]>([]);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     apiClient.getExchanges().then((data) => {
       setExchanges(data.exchanges || []);
-    });
+    }).catch(() => setExchanges([]));
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="topbar">
@@ -21,6 +30,9 @@ function TopBar() {
           <span className="label">Connected:</span>
           <span className="count">{exchanges.length}</span>
         </div>
+        <button type="button" className="topbar-logout" onClick={handleLogout}>
+          Sign out
+        </button>
       </div>
     </div>
   );

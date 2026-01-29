@@ -111,6 +111,9 @@ class WebSocketManager {
 
   onConnection(handler: ConnectionHandler): () => void {
     this.connectionHandlers.add(handler);
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      handler();
+    }
     return () => {
       this.connectionHandlers.delete(handler);
     };

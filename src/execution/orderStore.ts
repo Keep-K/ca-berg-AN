@@ -18,15 +18,15 @@ const pool = new Pool({
 
 export class OrderStore {
   /**
-   * Store a new order
+   * Store a new order (with user_id for multi-tenant)
    */
-  async storeOrder(order: OrderResult): Promise<void> {
+  async storeOrder(order: OrderResult, userId: number): Promise<void> {
     try {
       const query = `
         INSERT INTO orders (
-          order_id, exchange, symbol, side, type, price, quantity,
+          user_id, order_id, exchange, symbol, side, type, price, quantity,
           status, filled_quantity, remaining_quantity, created_at, timestamp
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), $12)
         ON CONFLICT (order_id, exchange) DO UPDATE SET
           status = EXCLUDED.status,
           filled_quantity = EXCLUDED.filled_quantity,
@@ -34,6 +34,7 @@ export class OrderStore {
       `;
 
       await pool.query(query, [
+        userId,
         order.orderId,
         order.exchange,
         order.symbol,
@@ -95,18 +96,19 @@ export class OrderStore {
   }
 
   /**
-   * Store a trade fill
+   * Store a trade fill (with user_id for multi-tenant)
    */
-  async storeTrade(trade: TradeFill): Promise<void> {
+  async storeTrade(trade: TradeFill, userId: number): Promise<void> {
     const query = `
       INSERT INTO trades (
-        trade_id, order_id, exchange, symbol, side, price, quantity,
+        user_id, trade_id, order_id, exchange, symbol, side, price, quantity,
         fee, fee_asset, timestamp, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
       ON CONFLICT (trade_id, exchange) DO NOTHING
     `;
 
     await pool.query(query, [
+      userId,
       trade.tradeId,
       trade.orderId,
       trade.exchange,
@@ -121,17 +123,18 @@ export class OrderStore {
   }
 
   /**
-   * Get order history
+   * Get order history (filtered by user_id)
    */
   async getOrderHistory(
+    userId: number,
     exchange?: string,
     symbol?: string,
     limit: number = 100
   ): Promise<OrderResult[]> {
     try {
-      let query = 'SELECT * FROM orders WHERE 1=1';
-      const params: any[] = [];
-      let paramIndex = 1;
+      let query = 'SELECT * FROM orders WHERE user_id = $1';
+      const params: any[] = [userId];
+      let paramIndex = 2;
 
       if (exchange) {
         query += ` AND exchange = $${paramIndex++}`;
@@ -188,17 +191,18 @@ export class OrderStore {
   }
 
   /**
-   * Get trade history
+   * Get trade history (filtered by user_id)
    */
   async getTradeHistory(
+    userId: number,
     exchange?: string,
     symbol?: string,
     limit: number = 100
   ): Promise<TradeFill[]> {
     try {
-      let query = 'SELECT * FROM trades WHERE 1=1';
-      const params: any[] = [];
-      let paramIndex = 1;
+      let query = 'SELECT * FROM trades WHERE user_id = $1';
+      const params: any[] = [userId];
+      let paramIndex = 2;
 
       if (exchange) {
         query += ` AND exchange = $${paramIndex++}`;
