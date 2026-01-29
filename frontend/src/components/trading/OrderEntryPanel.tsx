@@ -157,22 +157,22 @@ export default function OrderEntryPanel({ orderForm, setOrderForm, onSubmit, loa
         </div>
 
         <div className="options">
-          <label>
-            <input
-              type="checkbox"
-              checked={orderForm.reduceOnly}
-              onChange={(e) => setOrderForm({ ...orderForm, reduceOnly: e.target.checked })}
-            />
-            Reduce-only
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={orderForm.postOnly}
-              onChange={(e) => setOrderForm({ ...orderForm, postOnly: e.target.checked })}
-            />
-            Post-only
-          </label>
+        <label className="option-pill">
+          <input
+            type="checkbox"
+            checked={orderForm.reduceOnly}
+            onChange={(e) => setOrderForm({ ...orderForm, reduceOnly: e.target.checked })}
+          />
+          <span>Reduce-only</span>
+        </label>
+        <label className="option-pill">
+          <input
+            type="checkbox"
+            checked={orderForm.postOnly}
+            onChange={(e) => setOrderForm({ ...orderForm, postOnly: e.target.checked })}
+          />
+          <span>Post-only</span>
+        </label>
         </div>
 
         <button
