@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { apiClient } from '../services/api';
-import DataTable from '../components/DataTable';
-import TradingViewWidget from '../components/TradingViewWidget';
+import MarketBar from '../components/trading/MarketBar';
+import ChartPanel from '../components/trading/ChartPanel';
+import OrderEntryPanel from '../components/trading/OrderEntryPanel';
+import OrderBookPanel from '../components/trading/OrderBookPanel';
+import RecentTradesPanel from '../components/trading/RecentTradesPanel';
+import BottomTabs from '../components/trading/BottomTabs';
 import './Trading.css';
 
 interface OrderResult {
@@ -61,6 +65,7 @@ function Trading() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<'order' | 'orderbook' | 'trades'>('order');
 
   useEffect(() => {
     fetchExchanges();
@@ -470,238 +475,97 @@ function Trading() {
       ? `BINANCE:${positions[0].symbol.replace('/', '')}`
       : 'BINANCE:BTCUSDT';
 
+  const symbolOptions = useMemo(() => {
+    const fromPositions = positions.map((p) => p.symbol);
+    const fromOrders = orderHistory.map((o) => o.symbol);
+    const fromTrades = tradeHistory.map((t) => t.symbol);
+    return Array.from(new Set([...fromPositions, ...fromOrders, ...fromTrades]));
+  }, [orderHistory, positions, tradeHistory]);
+
+  const marketStats = {
+    last: '--',
+    change24h: '+0.00%',
+    high: '--',
+    low: '--',
+    vol: '--',
+  }; // TODO: Replace with live market summary from backend/WS.
+
   return (
-    <div className="trading-page">
-      <div className="page-header">
-        <h1>Trading</h1>
-      </div>
+    <div className="trading-page terminal">
+      <MarketBar
+        symbol={orderForm.symbol}
+        onSymbolChange={(value) => setOrderForm({ ...orderForm, symbol: value })}
+        exchanges={exchanges}
+        selectedExchange={selectedExchange}
+        onExchangeChange={(value) => setSelectedExchange(value)}
+        market={orderForm.market}
+        onMarketChange={(value) => setOrderForm({ ...orderForm, market: value })}
+        stats={marketStats}
+        symbolOptions={symbolOptions}
+      />
 
-      {error && (
-        <div className="alert alert-error">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="alert alert-success">
-          {success}
-        </div>
-      )}
+      {error && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
 
       <div className="trading-layout">
-        {/* Order Ticket Panel */}
-        <div className="order-ticket">
-          <h3>Place Order</h3>
-          <div className="form-group">
-            <label>Exchange</label>
-            {exchanges.length === 0 ? (
-              <div className="exchange-warning">
-                <p>No trading exchanges available. Please connect an exchange first.</p>
-                <a href="/exchanges" className="link-primary">Go to Exchanges</a>
-              </div>
-            ) : (
-              <select
-                value={selectedExchange}
-                onChange={(e) => setSelectedExchange(e.target.value)}
-                className="form-select"
-                disabled={exchanges.length === 0}
-              >
-                <option value="">Select Exchange</option>
-                {exchanges.map((ex) => (
-                  <option key={ex} value={ex}>
-                    {ex.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div className="form-group">
-            <label>Symbol</label>
-            <input
-              type="text"
-              value={orderForm.symbol}
-              onChange={(e) => setOrderForm({ ...orderForm, symbol: e.target.value.toUpperCase() })}
-              placeholder="BTCUSDT"
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Side</label>
-            <div className="side-toggle">
-              <button
-                className={`side-btn ${orderForm.side === 'buy' ? 'active buy' : ''}`}
-                onClick={() => setOrderForm({ ...orderForm, side: 'buy' })}
-              >
-                BUY
-              </button>
-              <button
-                className={`side-btn ${orderForm.side === 'sell' ? 'active sell' : ''}`}
-                onClick={() => setOrderForm({ ...orderForm, side: 'sell' })}
-              >
-                SELL
-              </button>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>Type</label>
-            <select
-              value={orderForm.type}
-              onChange={(e) => setOrderForm({ ...orderForm, type: e.target.value as 'market' | 'limit' })}
-              className="form-select"
-            >
-              <option value="limit">Limit</option>
-              <option value="market">Market</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Market</label>
-            <select
-              value={orderForm.market}
-              onChange={(e) => setOrderForm({ ...orderForm, market: e.target.value as 'spot' | 'futures' })}
-              className="form-select"
-            >
-              <option value="spot">Spot</option>
-              <option value="futures">Futures</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Quantity</label>
-            <input
-              type="number"
-              value={orderForm.quantity}
-              onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })}
-              placeholder="0.00"
-              step="0.0001"
-              className="form-input"
-            />
-          </div>
-
-          {orderForm.type === 'limit' && (
-            <div className="form-group">
-              <label>Price</label>
-              <input
-                type="number"
-                value={orderForm.price}
-                onChange={(e) => setOrderForm({ ...orderForm, price: e.target.value })}
-                placeholder="0.00"
-                step="0.01"
-                className="form-input"
-              />
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={orderForm.reduceOnly}
-                onChange={(e) => setOrderForm({ ...orderForm, reduceOnly: e.target.checked })}
-              />
-              <span>Reduce Only</span>
-            </label>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={orderForm.postOnly}
-                onChange={(e) => setOrderForm({ ...orderForm, postOnly: e.target.checked })}
-              />
-              <span>Post Only (Maker)</span>
-            </label>
-          </div>
-
-          <button
-            className={`btn-place-order ${orderForm.side === 'buy' ? 'buy' : 'sell'}`}
-            onClick={handlePlaceOrder}
-            disabled={loading || !selectedExchange || !orderForm.symbol || !orderForm.quantity}
-          >
-            {loading ? 'Placing...' : `${orderForm.side === 'buy' ? 'BUY' : 'SELL'} ${orderForm.symbol || 'ORDER'}`}
-          </button>
+        <div className="left-column">
+          <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
+          <BottomTabs
+            positions={positions}
+            positionColumns={positionColumns}
+            openOrders={openOrders}
+            orderColumns={orderColumns}
+            orderHistory={orderHistory}
+            historyOrderColumns={historyOrderColumns}
+            tradeHistory={tradeHistory}
+            tradeColumns={tradeColumns}
+          />
         </div>
 
-        <div className="trading-right">
-          <div className="chart-panel">
-            <div className="chart-header">
-              <h3>Chart (TradingView)</h3>
-              <div className="chart-meta">{chartSymbol}</div>
-            </div>
-            <div className="chart-body">
-              <TradingViewWidget symbol={chartSymbol} interval="60" theme="dark" />
-            </div>
+        <div className="right-column">
+          <div className="right-tabs">
+            <button
+              type="button"
+              className={rightPanelTab === 'order' ? 'active' : ''}
+              onClick={() => setRightPanelTab('order')}
+            >
+              Order
+            </button>
+            <button
+              type="button"
+              className={rightPanelTab === 'orderbook' ? 'active' : ''}
+              onClick={() => setRightPanelTab('orderbook')}
+            >
+              Order Book
+            </button>
+            <button
+              type="button"
+              className={rightPanelTab === 'trades' ? 'active' : ''}
+              onClick={() => setRightPanelTab('trades')}
+            >
+              Trades
+            </button>
           </div>
 
-        {/* Open Orders Table */}
-        <div className="open-orders">
-          <div className="section-header">
-            <h3>Open Orders</h3>
-            {selectedExchange && (
-              <button
-                className="btn-secondary btn-sm"
-                onClick={() => {
-                  if (confirm('Cancel all open orders?')) {
-                    apiClient.cancelAllOrders(selectedExchange)
-                      .then(() => fetchOpenOrders())
-                      .catch(console.error);
-                  }
-                }}
-              >
-                Cancel All
-              </button>
-            )}
+          <div className="right-panels">
+            <div className={`right-panel ${rightPanelTab === 'order' ? 'is-active' : ''}`}>
+              <OrderEntryPanel
+                orderForm={orderForm}
+                setOrderForm={setOrderForm}
+                onSubmit={handlePlaceOrder}
+                loading={loading}
+              />
+            </div>
+            <div className={`right-panel ${rightPanelTab === 'orderbook' ? 'is-active' : ''}`}>
+              <OrderBookPanel />
+            </div>
+            <div className={`right-panel ${rightPanelTab === 'trades' ? 'is-active' : ''}`}>
+              <RecentTradesPanel />
+            </div>
           </div>
-          {selectedExchange ? (
-            <>
-              {openOrders.length === 0 ? (
-                <div className="empty-state">
-                  <p>No open orders</p>
-                  <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
-                    Place an order above to see it here
-                  </p>
-                </div>
-              ) : (
-                <DataTable
-                  columns={orderColumns}
-                  data={openOrders}
-                  emptyMessage="No open orders"
-                />
-              )}
-            </>
-          ) : (
-            <div className="empty-state">Select an exchange to view orders</div>
-          )}
-        </div>
         </div>
       </div>
 
-      <div className="trading-panels">
-        <div className="panel">
-          <div className="section-header">
-            <h3>Positions</h3>
-          </div>
-          <DataTable columns={positionColumns} data={positions} emptyMessage="No open positions" />
-        </div>
-
-        <div className="panel">
-          <div className="section-header">
-            <h3>Order History</h3>
-          </div>
-          <DataTable columns={historyOrderColumns} data={orderHistory} emptyMessage="No order history" />
-        </div>
-
-        <div className="panel">
-          <div className="section-header">
-            <h3>Trade History</h3>
-          </div>
-          <DataTable columns={tradeColumns} data={tradeHistory} emptyMessage="No trade history" />
-        </div>
-      </div>
     </div>
   );
 }
