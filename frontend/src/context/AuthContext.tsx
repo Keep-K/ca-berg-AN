@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import axios from 'axios';
 
 export const AUTH_TOKEN_KEY = 'auth_token';
+export const AUTH_ENABLED_KEY = 'auth_enabled';
 
 declare global {
   interface Window {
@@ -11,6 +12,8 @@ declare global {
 
 interface AuthContextValue {
   token: string | null;
+  authEnabled: boolean;
+  setAuthEnabled: (enabled: boolean) => void;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -20,9 +23,31 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function parseBooleanEnv(value: unknown, defaultValue: boolean): boolean {
+  if (value == null) return defaultValue;
+  const s = String(value).trim().toLowerCase();
+  if (s === '') return defaultValue;
+  if (['0', 'false', 'no', 'off'].includes(s)) return false;
+  if (['1', 'true', 'yes', 'on'].includes(s)) return true;
+  return defaultValue;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(AUTH_TOKEN_KEY));
+  const [authEnabled, setAuthEnabledState] = useState<boolean>(() => {
+    const stored = localStorage.getItem(AUTH_ENABLED_KEY);
+    if (stored != null) return stored === '1';
+    // Default: enabled (login required) unless explicitly turned off.
+    return parseBooleanEnv((import.meta as any)?.env?.VITE_AUTH_ENABLED, true);
+  });
   const [error, setError] = useState<string | null>(null);
+
+  const setAuthEnabled = useCallback((enabled: boolean) => {
+    localStorage.setItem(AUTH_ENABLED_KEY, enabled ? '1' : '0');
+    setAuthEnabledState(enabled);
+    // When switching modes, clear stale error messages.
+    setError(null);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setError(null);
@@ -61,7 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         token,
-        isAuthenticated: !!token,
+        authEnabled,
+        setAuthEnabled,
+        isAuthenticated: authEnabled ? !!token : true,
         login,
         logout,
         error,

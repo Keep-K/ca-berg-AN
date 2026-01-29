@@ -559,103 +559,42 @@ function Trading() {
 
   return (
     <div className="trading-page terminal">
-      <MarketBar
-        symbol={orderForm.symbol}
-        onSymbolChange={(value) => setOrderForm({ ...orderForm, symbol: value })}
-        exchanges={exchanges}
-        selectedExchange={selectedExchange}
-        onExchangeChange={(value) => setSelectedExchange(value)}
-        market={orderForm.market}
-        onMarketChange={(value) => setOrderForm({ ...orderForm, market: value })}
-        stats={marketStats}
-        symbolOptions={symbolOptions}
-      />
-
-      {error && <div className="alert alert-error">{error}</div>}
-      {success && <div className="alert alert-success">{success}</div>}
-
-      {orderForm.market === 'spot' ? (
-        <div className="spot-layout">
-          <div className="spot-grid">
-            <div className="spot-orderbook">
-              <OrderBookPanel />
-            </div>
-            <div className="spot-chart">
-              <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
-            </div>
-            <div className="spot-marketlist">
-              <MarketListPanel />
-            </div>
-            <div className="spot-orderentry">
-              <OrderEntryPanel
-                orderForm={orderForm}
-                setOrderForm={setOrderForm}
-                onSubmit={handlePlaceOrder}
-                loading={loading}
-              />
-            </div>
-            <div className="spot-trades">
-              <RecentTradesPanel />
-            </div>
-          </div>
-          <BottomTabs
-            positions={positions}
-            positionColumns={positionColumns}
-            openOrders={openOrders}
-            orderColumns={orderColumns}
-            orderHistory={orderHistory}
-            historyOrderColumns={historyOrderColumns}
-            tradeHistory={tradeHistory}
-            tradeColumns={tradeColumns}
-            transactions={transactions}
-            assets={assets}
+      <div className="trading-viewport">
+        <div className="trading-top">
+          <MarketBar
+            symbol={orderForm.symbol}
+            onSymbolChange={(value) => setOrderForm({ ...orderForm, symbol: value })}
+            exchanges={exchanges}
+            selectedExchange={selectedExchange}
+            onExchangeChange={(value) => setSelectedExchange(value)}
+            market={orderForm.market}
+            onMarketChange={(value) => setOrderForm({ ...orderForm, market: value })}
+            stats={marketStats}
+            symbolOptions={symbolOptions}
           />
+
+          {error && <div className="alert alert-error">{error}</div>}
+          {success && <div className="alert alert-success">{success}</div>}
         </div>
-      ) : (
-        <div className="trading-layout">
-          <div className="left-column">
-            <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
-            <BottomTabs
-              positions={positions}
-              positionColumns={positionColumns}
-              openOrders={openOrders}
-              orderColumns={orderColumns}
-              orderHistory={orderHistory}
-              historyOrderColumns={historyOrderColumns}
-              tradeHistory={tradeHistory}
-              tradeColumns={tradeColumns}
-              transactions={transactions}
-              assets={assets}
-            />
-          </div>
 
-          <div className="right-column">
-            <div className="right-tabs">
-              <button
-                type="button"
-                className={rightPanelTab === 'order' ? 'active' : ''}
-                onClick={() => setRightPanelTab('order')}
-              >
-                Order
-              </button>
-              <button
-                type="button"
-                className={rightPanelTab === 'orderbook' ? 'active' : ''}
-                onClick={() => setRightPanelTab('orderbook')}
-              >
-                Order Book
-              </button>
-              <button
-                type="button"
-                className={rightPanelTab === 'trades' ? 'active' : ''}
-                onClick={() => setRightPanelTab('trades')}
-              >
-                Trades
-              </button>
-            </div>
-
-            <div className="right-panels">
-              <div className={`right-panel ${rightPanelTab === 'order' ? 'is-active' : ''}`}>
+        <div className="trading-main">
+          {orderForm.market === 'spot' ? (
+            <div className="spot-grid">
+              <div className="spot-orderbook">
+                <OrderBookPanel />
+              </div>
+              <div className="spot-chart">
+                <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
+              </div>
+              <div className="spot-right">
+                <div className="spot-marketlist">
+                  <MarketListPanel />
+                </div>
+                <div className="spot-trades">
+                  <RecentTradesPanel />
+                </div>
+              </div>
+              <div className="spot-orderentry">
                 <OrderEntryPanel
                   orderForm={orderForm}
                   setOrderForm={setOrderForm}
@@ -663,17 +602,72 @@ function Trading() {
                   loading={loading}
                 />
               </div>
-              <div className={`right-panel ${rightPanelTab === 'orderbook' ? 'is-active' : ''}`}>
-                <OrderBookPanel />
+            </div>
+          ) : (
+            <div className="trading-layout">
+              <div className="left-column">
+                <ChartPanel symbol={chartSymbol} interval="60" theme="dark" />
               </div>
-              <div className={`right-panel ${rightPanelTab === 'trades' ? 'is-active' : ''}`}>
-                <RecentTradesPanel />
+
+              <div className="right-column">
+                <div className="right-tabs">
+                  <button
+                    type="button"
+                    className={rightPanelTab === 'order' ? 'active' : ''}
+                    onClick={() => setRightPanelTab('order')}
+                  >
+                    Order
+                  </button>
+                  <button
+                    type="button"
+                    className={rightPanelTab === 'orderbook' ? 'active' : ''}
+                    onClick={() => setRightPanelTab('orderbook')}
+                  >
+                    Order Book
+                  </button>
+                  <button
+                    type="button"
+                    className={rightPanelTab === 'trades' ? 'active' : ''}
+                    onClick={() => setRightPanelTab('trades')}
+                  >
+                    Trades
+                  </button>
+                </div>
+
+                <div className="right-panels">
+                  <div className={`right-panel ${rightPanelTab === 'order' ? 'is-active' : ''}`}>
+                    <OrderEntryPanel
+                      orderForm={orderForm}
+                      setOrderForm={setOrderForm}
+                      onSubmit={handlePlaceOrder}
+                      loading={loading}
+                    />
+                  </div>
+                  <div className={`right-panel ${rightPanelTab === 'orderbook' ? 'is-active' : ''}`}>
+                    <OrderBookPanel />
+                  </div>
+                  <div className={`right-panel ${rightPanelTab === 'trades' ? 'is-active' : ''}`}>
+                    <RecentTradesPanel />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
+      <BottomTabs
+        positions={positions}
+        positionColumns={positionColumns}
+        openOrders={openOrders}
+        orderColumns={orderColumns}
+        orderHistory={orderHistory}
+        historyOrderColumns={historyOrderColumns}
+        tradeHistory={tradeHistory}
+        tradeColumns={tradeColumns}
+        transactions={transactions}
+        assets={assets}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import './Login.css';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, error, clearError } = useAuth();
+  const { login, error, clearError, authEnabled, setAuthEnabled } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +25,24 @@ export default function Login() {
       <div className="login-card">
         <h1>Portfolio Monitor</h1>
         <p className="login-subtitle">Sign in to continue</p>
+        <div className="auth-mode-row">
+          <div className="auth-mode-label">
+            <div className="title">로그인 모드</div>
+            <div className="desc">UI 검토 시 OFF로 두면 로그인 없이 진입합니다.</div>
+          </div>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={authEnabled}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setAuthEnabled(enabled);
+                if (!enabled) navigate('/', { replace: true });
+              }}
+            />
+            <span className="slider" />
+          </label>
+        </div>
         <form onSubmit={handleSubmit} className="login-form">
           <input
             type="email"

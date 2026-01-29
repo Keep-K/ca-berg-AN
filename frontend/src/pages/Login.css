@@ -29,6 +29,72 @@
   font-size: 0.9rem;
 }
 
+.auth-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: rgba(13, 17, 23, 0.35);
+}
+
+.auth-mode-label .title {
+  color: #e6edf3;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.auth-mode-label .desc {
+  margin-top: 2px;
+  color: #8b949e;
+  font-size: 0.75rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch .slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #30363d;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background: #e6edf3;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.switch input:checked + .slider {
+  background: #238636;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
 .login-form {
   display: flex;
   flex-direction: column;

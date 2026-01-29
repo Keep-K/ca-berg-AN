@@ -1,4 +1,5 @@
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import './Layout.css';
@@ -9,6 +10,7 @@ interface LayoutProps {
 
 function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -35,7 +37,11 @@ function Layout({ children }: LayoutProps) {
       />
       <div className="main-content">
         <TopBar onToggleSidebar={toggleSidebar} onOpenSidebar={openSidebar} />
-        <div className="page-content">{children}</div>
+        <div
+          className={`page-content ${location.pathname.startsWith('/trading') ? 'page-content--trading' : ''}`}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

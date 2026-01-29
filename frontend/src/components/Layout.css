@@ -1,5 +1,5 @@
 .layout {
-  display: block;
+  display: flex;
   height: 100vh;
   background: #0f1116;
 }
@@ -23,10 +23,51 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 100vh;
 }
 
 .page-content {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  min-height: 0;
+}
+
+/* Trading은 100vw x 100vh "한 화면" 고정 레이아웃이므로,
+   상단(100vh) + 하단 탭(아래로 내려가 스크롤) 레이아웃을 쓴다. */
+.page-content.page-content--trading {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100vh - 64px);
+
+  /* Trading "전체 스크롤"도 내부 패널과 동일한 커스텀 스크롤 */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #2b3443 rgba(15, 17, 22, 0.2);
+}
+
+.page-content.page-content--trading::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.page-content.page-content--trading::-webkit-scrollbar-track {
+  background: rgba(15, 17, 22, 0.2);
+  border-radius: 999px;
+}
+
+.page-content.page-content--trading::-webkit-scrollbar-thumb {
+  background: #2b3443;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 17, 22, 0.2);
+}
+
+.page-content.page-content--trading::-webkit-scrollbar-thumb:hover {
+  background: #3b465a;
 }

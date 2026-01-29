@@ -4,6 +4,74 @@
   flex-direction: column;
   gap: 10px;
   font-variant-numeric: tabular-nums;
+  min-height: 100%;
+}
+
+/* Trading 전용: 패널은 기본적으로 "헤더 + 바디(스크롤)" 형태 */
+.trading-page .panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 커스텀 스크롤(Trading 전용) */
+.trading-page .table.dense.scroll,
+.trading-page .panel-body,
+.trading-page .tab-content,
+.trading-page .trading-viewport {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #2b3443 rgba(15, 17, 22, 0.2);
+}
+
+.trading-page .table.dense.scroll::-webkit-scrollbar,
+.trading-page .panel-body::-webkit-scrollbar,
+.trading-page .tab-content::-webkit-scrollbar,
+.trading-page .trading-viewport::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.trading-page .table.dense.scroll::-webkit-scrollbar-track,
+.trading-page .panel-body::-webkit-scrollbar-track,
+.trading-page .tab-content::-webkit-scrollbar-track,
+.trading-page .trading-viewport::-webkit-scrollbar-track {
+  background: rgba(15, 17, 22, 0.2);
+  border-radius: 999px;
+}
+
+.trading-page .table.dense.scroll::-webkit-scrollbar-thumb,
+.trading-page .panel-body::-webkit-scrollbar-thumb,
+.trading-page .tab-content::-webkit-scrollbar-thumb,
+.trading-page .trading-viewport::-webkit-scrollbar-thumb {
+  background: #2b3443;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 17, 22, 0.2);
+}
+
+.trading-page .table.dense.scroll::-webkit-scrollbar-thumb:hover,
+.trading-page .panel-body::-webkit-scrollbar-thumb:hover,
+.trading-page .tab-content::-webkit-scrollbar-thumb:hover,
+.trading-page .trading-viewport::-webkit-scrollbar-thumb:hover {
+  background: #3b465a;
+}
+
+.trading-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.trading-main {
+  min-height: 0;
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.trading-main > * {
+  min-height: 0;
+  width: 100%;
 }
 
 .market-bar {
@@ -148,6 +216,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 10px;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  align-items: stretch;
 }
 
 .left-column,
@@ -155,6 +227,44 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+}
+
+.trading-layout .left-column .chart-panel {
+  height: 100%;
+  min-height: 0;
+}
+
+.trading-layout .right-column {
+  min-height: 0;
+}
+
+.trading-layout .right-panels {
+  flex: 1;
+  min-height: 0;
+}
+
+.trading-layout .right-panels .right-panel {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+}
+
+/* Futures 우측 패널: 위→아래 순서 유지 + 높이 비율로 고정 */
+.trading-layout .right-panels .right-panel:nth-child(1) {
+  flex: 6; /* Order Entry */
+}
+.trading-layout .right-panels .right-panel:nth-child(2) {
+  flex: 4; /* Order Book */
+}
+.trading-layout .right-panels .right-panel:nth-child(3) {
+  flex: 4; /* Trades */
+}
+
+.trading-layout .right-panels .right-panel > .panel {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
 }
 
 .chart-panel {
@@ -162,7 +272,9 @@
   border: 1px solid #1f2430;
   border-radius: 8px;
   padding: 6px;
-  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .chart-header {
@@ -192,7 +304,8 @@
 
 
 .chart-body {
-  height: 440px;
+  flex: 1;
+  min-height: 0;
 }
 
 .tradingview-widget {
@@ -431,20 +544,117 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.spot-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  min-height: 0;
 }
 
 .spot-grid {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 300px;
-  grid-template-rows: auto auto;
+  /* Chart : OrderEntry = 4 : 6 */
+  grid-template-rows: minmax(0, 4fr) minmax(0, 6fr);
   gap: 8px;
-  align-items: start;
+  align-items: stretch;
+  justify-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 상단(100vh) 영역: page-content(=TopBar 제외 높이)를 정확히 채운다 */
+.trading-viewport {
+  height: calc(100vh - 64px);
+  flex: 0 0 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.pot-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  /* Chart : OrderEntry = 4 : 6 */
+  grid-template-rows: minmax(0, 4fr) minmax(0, 6fr);
+  gap: 8px;
+  align-items: stretch;
+  justify-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.pot-orderbook {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.pot-chart {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+}
+
+.pot-orderentry {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+}
+
+.pot-right {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.pot-marketlist {
+  flex: 2;
+  min-height: 0;
+}
+
+.pot-trade {
+  flex: 3;
+  min-height: 0;
+}
+
+/* pot-* 래퍼 내부 패널이 셀 높이에 맞춰 "고정"되게 */
+.pot-orderbook,
+.pot-chart,
+.pot-orderentry,
+.pot-marketlist,
+.pot-trade {
+  min-height: 0;
+  display: flex;
+}
+
+.pot-orderbook > .panel,
+.pot-orderentry > .panel,
+.pot-marketlist > .panel,
+.pot-trade > .panel,
+.pot-chart > .chart-panel {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* spot-*도 동일하게 셀 높이를 강제 */
+.spot-orderbook,
+.spot-chart,
+.spot-orderentry,
+.spot-marketlist,
+.spot-trades {
+  min-height: 0;
 }
 
 .spot-orderbook {
@@ -452,43 +662,62 @@
   grid-row: 1 / span 2;
   display: flex;
   align-self: stretch;
+  min-height: 0;
+}
+
+.spot-orderbook > .panel {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .spot-chart {
   grid-column: 2;
   grid-row: 1;
+  min-height: 0;
+}
+
+.spot-right {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
 }
 
 .spot-marketlist {
-  grid-column: 3;
-  grid-row: 1;
+  flex: 2;
+  min-height: 0;
 }
 
 .spot-orderentry {
   grid-column: 2;
   grid-row: 2;
+  min-height: 0;
 }
 
 .spot-trades {
-  grid-column: 3;
-  grid-row: 2;
+  flex: 3;
+  min-height: 0;
 }
 
 .marketlist-panel .row {
   grid-template-columns: 1fr 1fr 1fr;
 }
 
-.spot-layout .panel {
+.spot-grid .panel {
   border-radius: 4px;
   padding: 6px;
   background: #0f1116;
 }
 
-.spot-layout .panel-header {
+.spot-grid .panel-header {
   margin-bottom: 6px;
 }
 
-.spot-layout .panel-header h3 {
+.spot-grid .panel-header h3 {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 11px;
@@ -582,9 +811,103 @@
 .bottom-tabs {
   background: #0f1116;
   border: 1px solid #1f2430;
-  border-radius: 8px;
-  padding: 6px;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 0 24px 24px;
+  height: 282px;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
 }
+
+/* Order Entry: 너비에 따라 "여유/압축" 자동 전환 (container query) */
+.panel.order-entry {
+  container-type: inline-size;
+  container-name: orderentry;
+}
+
+.order-entry .panel-body.order-entry-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 넓을 때(여유 레이아웃) */
+@container orderentry (min-width: 680px) {
+  .order-entry .panel-body.order-entry-body {
+    gap: 8px;
+  }
+
+  .order-entry .field input,
+  .order-entry .leverage-controls select {
+    padding: 5px 7px;
+    font-size: 12px;
+  }
+
+  .order-entry .segment-btn,
+  .order-entry .tab,
+  .order-entry .quick-pct button {
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+
+  .order-entry .options {
+    gap: 12px;
+    flex-wrap: nowrap;
+  }
+}
+
+/* 좁을 때(압축 레이아웃) */
+@container orderentry (max-width: 679px) {
+  .order-entry .panel-body.order-entry-body {
+    gap: 4px;
+  }
+
+  .order-entry .segment {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .order-entry .tabs {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .order-entry .form-grid {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .order-entry .quick-pct {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .order-entry .options {
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+
+  .order-entry .field input,
+  .order-entry .leverage-controls select {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  .order-entry .segment-btn,
+  .order-entry .tab,
+  .order-entry .quick-pct button {
+    padding: 5px 6px;
+    font-size: 11px;
+  }
+}
+
 
 .tabs-row {
   display: flex;
@@ -607,7 +930,9 @@
 }
 
 .tab-content {
-  min-height: 160px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .bottom-tabs .table.dense .row {
@@ -718,14 +1043,18 @@
   padding: 18px;
 }
 
+/* "한 화면" 안에서 패널 높이에 맞춰 스크롤되도록 max-height 고정값 제거 */
 .table.dense.scroll {
-  max-height: 220px;
   overflow: auto;
+  min-height: 0;
 }
 
 .orderbook-panel .panel-body,
-.trades-panel .panel-body {
-  max-height: 240px;
+.trades-panel .panel-body,
+.marketlist-panel .panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .spot-orderbook .panel {
@@ -737,11 +1066,29 @@
 .spot-orderbook .panel-body {
   max-height: none;
   flex: 1;
+  min-height: 0;
 }
 
 .spot-orderbook .table.dense.scroll {
   max-height: none;
   height: 100%;
+}
+
+.spot-chart .chart-panel,
+.spot-marketlist .panel,
+.spot-trades .panel,
+.spot-orderentry .panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.spot-marketlist .panel-body,
+.spot-trades .panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .right-panel {

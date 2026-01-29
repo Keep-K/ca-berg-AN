@@ -1,6 +1,6 @@
 {
   "name": "multi-exchange-portfolio-monitor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Multi-Exchange Portfolio Monitoring Platform - Phase 1 (Read-Only)",
   "main": "dist/index.js",
   "scripts": {

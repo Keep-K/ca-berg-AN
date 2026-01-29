@@ -11,7 +11,7 @@ type TopBarProps = {
 
 function TopBar({ onToggleSidebar, onOpenSidebar }: TopBarProps) {
   const [exchanges, setExchanges] = useState<string[]>([]);
-  const { logout } = useAuth();
+  const { logout, isAuthenticated, authEnabled, setAuthEnabled } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,13 +39,30 @@ function TopBar({ onToggleSidebar, onOpenSidebar }: TopBarProps) {
         <h2>Portfolio Monitor</h2>
       </div>
       <div className="topbar-right">
+        <div className="auth-mode-pill">
+          <span className="label">Login</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={authEnabled}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setAuthEnabled(enabled);
+                if (enabled && !isAuthenticated) navigate('/login', { replace: true });
+              }}
+            />
+            <span className="slider" />
+          </label>
+        </div>
         <div className="exchanges-indicator">
           <span className="label">Connected:</span>
           <span className="count">{exchanges.length}</span>
         </div>
-        <button type="button" className="topbar-logout" onClick={handleLogout}>
-          Sign out
-        </button>
+        {authEnabled && (
+          <button type="button" className="topbar-logout" onClick={handleLogout}>
+            Sign out
+          </button>
+        )}
       </div>
     </div>
   );

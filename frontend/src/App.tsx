@@ -12,16 +12,17 @@ import Exchanges from './pages/Exchanges';
 import Alerts from './pages/Alerts';
 
 function LoginRoute() {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated) {
+  const { isAuthenticated, authEnabled } = useAuth();
+  if (!authEnabled) {
     return <Navigate to="/" replace />;
   }
+  if (isAuthenticated) return <Navigate to="/" replace />;
   return <Login />;
 }
 
 function ProtectedRoutes() {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
+  const { isAuthenticated, authEnabled } = useAuth();
+  if (authEnabled && !isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   return (
